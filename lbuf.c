@@ -42,6 +42,8 @@ uint8_t get(uint8_t * buffer, size_t n, uint8_t ix, uint8_t align)
 static int lbuf_new(lua_State *L)
 {
   lua_pushlightuserdata(L, buffer);
+  luaL_getmetatable(L, "lbuf.buffer");
+  lua_setmetatable(L, -2);
   return 1;
 }
 
@@ -98,8 +100,15 @@ static const luaL_Reg lbuf[ ] = {
   {NULL, NULL}
 };
 
+static const luaL_Reg lbuf_m[ ] = {
+  {"__index", lbuf_get},
+  {NULL, NULL}
+};
+
 int luaopen_lbuf(lua_State *L)
 {
+  luaL_newmetatable(L, "lbuf.buffer");
+  luaL_register(L, NULL, lbuf_m);
   luaL_register(L, "lbuf", lbuf);
 }
 
