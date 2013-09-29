@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#include <lua.h>
+#include <lauxlib.h>
+
 uint8_t buffer[ 4 ] = { 1 , 2, 4, 8 };
 
-//static int lbuf_get(lua_State *L)
-void get(uint8_t * buffer, size_t n, uint8_t ix, uint8_t align)
+uint8_t get(uint8_t * buffer, size_t n, uint8_t ix, uint8_t align)
 {
   printf("[ ix = %d, align = %d]\n", ix, align);
   uint8_t bit_ix  = (ix - 1) * align;
@@ -34,8 +36,36 @@ void get(uint8_t * buffer, size_t n, uint8_t ix, uint8_t align)
   printf("mask     = %X\n", (int) mask);
   printf("result   = %d\n", (int) result);
   printf("----------------------\n\n");
+  return result;
 }
 
+static int lbuf_new(lua_State *L)
+{
+  lua_pushlightuserdata(L, buffer);
+  return 1;
+}
+
+static int lbuf_get(lua_State *L)
+{
+  uint8_t * buffer = (uint8_t *) lua_touserdata(L, 1);
+
+  uint8_t ix = (uint8_t) luaL_checkinteger(L, 2);
+  //uint8_t align = (uint8_t) luaL_checkinteger(L, 2);
+  uint8_t value = get(buffer, 4, ix, 3);
+  lua_pushnumber(L, value);
+  return 1;
+}
+
+static int lbuf_rawget(lua_State *L)
+{
+  uint8_t ix    = (uint8_t) luaL_checkinteger(L, 1);
+  uint8_t align = (uint8_t) luaL_checkinteger(L, 2);
+  uint8_t value = get(buffer, 4, ix, align);
+  lua_pushnumber(L, value);
+  return 1;
+}
+
+#if 0
 int main(void)
 {
   // args
@@ -59,11 +89,17 @@ int main(void)
   get(buffer, 4, 1, 9);
   get(buffer, 4, 2, 9);
 }
+#endif
 
-#if 0
-static const luaL_Reg lbuflib[] = {
+static const luaL_Reg lbuf[ ] = {
+  {"new", lbuf_new},
   {"get", lbuf_get},
+  {"rawget", lbuf_rawget},
   {NULL, NULL}
 };
-#endif
+
+int luaopen_lbuf(lua_State *L)
+{
+  luaL_register(L, "lbuf", lbuf);
+}
 
