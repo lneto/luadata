@@ -107,9 +107,11 @@ static int lbuf_maskt(lua_State *L)
   lua_pushnil(L);  /* first key */
   while (lua_next(L, t) != 0) {
     /* uses 'key' (at index -2) and 'value' (at index -1) */
+#if 0
     printf("%s - %s\n",
         lua_typename(L, lua_type(L, -2)),
         lua_typename(L, lua_type(L, -1)));
+#endif
 
     if (!lua_isnumber(L, -1))
       continue;
@@ -117,7 +119,9 @@ static int lbuf_maskt(lua_State *L)
     lua_pushvalue(L, -2); // key
 
     mask_t * mask = lua_newuserdata(L, sizeof(mask_t));
+    // TODO: check limits
     mask->bit_ix  = offset;
+    // TODO: also handle tables
     mask->bit_len = lua_tonumber(L, -3); // TODO: checknumber
     offset        = mask->bit_ix + mask->bit_len;
 
@@ -163,13 +167,17 @@ static int lbuf_get_(lua_State *L)
   lbuf_t * lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
   uint8_t * buffer = (uint8_t *) lbuf->buffer;
 
-#if 0
-  uint8_t ix = (uint8_t) luaL_checkinteger(L, 2);
-  if (ix < 1 || ix * lbuf->align > lbuf->size) 
-    return 0;
-#endif
-
   lua_getmetatable(L, 1);
+  
+  if (lua_isstring(L, 2)) {
+    lua_pushvalue(L, 2);
+    lua_gettable(L, -2);
+    if (lua_iscfunction(L, -1))
+      return 1;
+    else
+      lua_pop(L, 1);
+  }    
+
   lua_getfield(L, -1, "__masks");
   lua_pushvalue(L, 1); // [ lubf | __masks | getmetatable(lbuf) | ix | lbuf ]
   lua_gettable(L, -2); // [ __masks[ lubf ] | lubf | __masks | (...) ]
@@ -207,6 +215,7 @@ static const luaL_Reg lbuf[ ] = {
 
 static const luaL_Reg lbuf_m[ ] = {
   {"mask", lbuf_mask},
+  {"maskt", lbuf_maskt},
   {"__index", lbuf_get_},
   {"__gc", lbuf_gc},
   {NULL, NULL}
