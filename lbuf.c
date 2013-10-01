@@ -27,6 +27,7 @@ typedef struct {
 } mask_t;
 
 // TODO: check limit
+// TODO: pass mask instead bit_{ix, len}
 static uint8_t rawget(lbuf_t * lbuf, uint8_t bit_ix, uint8_t bit_len)
 {
   uint8_t * buffer = lbuf->buffer;
@@ -138,7 +139,6 @@ static int lbuf_gc(lua_State *L)
 static int lbuf_get(lua_State *L)
 {
   lbuf_t * lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
-  uint8_t * buffer = (uint8_t *) lbuf->buffer;
 
   lua_getmetatable(L, 1);
   
@@ -156,8 +156,10 @@ static int lbuf_get(lua_State *L)
   lua_gettable(L, -2); // [ __masks[ lbuf ] | lbuf | __masks | (...) ]
   if (!lua_istable(L, -1)) {
     uint8_t ix = (uint8_t) luaL_checkinteger(L, 2);
-    if (ix < 1 || ix * lbuf->align > lbuf->size * 8) 
+    if (ix < 1 || ix * lbuf->align > lbuf->size * 8) { 
+      lua_pushnil(L);
       return 0;
+    }
 
     uint8_t value = rawget(lbuf, (ix - 1) * lbuf->align, lbuf->align);
     lua_pushnumber(L, value);
@@ -166,8 +168,8 @@ static int lbuf_get(lua_State *L)
 
   lua_pushvalue(L, 2); // [ ix | __masks[ lbuf ] | (...) ]
   lua_gettable(L, -2); // [ __masks[ lbuf ][ ix ] | ix | __masks[ lbuf ] | (...) ]
-  if (lua_isnil(L, -1))
-    return 0;
+  if (lua_isnil(L, -1)) 
+    return 1;
 
   //mask_t * mask = (mask_t *) luaL_checkudata(L, 1, "lbuf.mask");
   mask_t * mask = (mask_t *) luaL_checkudata(L, -1, "lbuf.mask");
@@ -177,27 +179,32 @@ static int lbuf_get(lua_State *L)
   return 1;
 }
 
-#if 0
 static int lbuf_rawget(lua_State *L)
 {
-  // TODO: use len instead align
-  uint8_t ix    = (uint8_t) luaL_checkinteger(L, 1);
-  uint8_t align = (uint8_t) luaL_checkinteger(L, 2);
-  uint8_t value = get(buffer, 4, ix, align);
+  lbuf_t * lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
+  uint8_t ix  = (uint8_t) luaL_checkinteger(L, 2);
+  uint8_t len = (uint8_t) luaL_checkinteger(L, 3);
+
+  if (ix < 0 || ix + len > lbuf->size * 8) { 
+    lua_pushnil(L);
+    return 1;
+  }
+
+  uint8_t value = rawget(lbuf, ix, len);
   lua_pushnumber(L, value);
   return 1;
 }
-#endif
 
 static const luaL_Reg lbuf[ ] = {
   {"new", lbuf_new_},
   {"mask", lbuf_mask},
-//  {"rawget", lbuf_rawget},
+  {"rawget", lbuf_rawget},
   {NULL, NULL}
 };
 
 static const luaL_Reg lbuf_m[ ] = {
   {"mask", lbuf_mask},
+  {"rawget", lbuf_rawget},
   {"__index", lbuf_get},
   {"__gc", lbuf_gc},
   {NULL, NULL}
