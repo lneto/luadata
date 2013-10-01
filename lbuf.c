@@ -5,6 +5,15 @@
 #include <lua.h>
 #include <lauxlib.h>
 
+// TODO:  - clean up!
+//        - unify functions (get and get_, mask and maskt)
+//        - fix rawget
+//        - limits and other verifications
+//        - mask userdata type
+//        - gc
+//        - dettach buffer
+//        - implement set and rawset
+
 uint8_t buffer[ 4 ] = { 1 , 2, 4, 8 };
 
 typedef struct {
