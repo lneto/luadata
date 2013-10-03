@@ -37,11 +37,14 @@
 //        - named fields
 //        - implement set and rawset
 
-uint8_t buffer[ 4 ] = { 0xFF, 0x7F, 0x80, 0x00 };
+typedef struct {
+  void * ref;
+  uint32_t count;
+} buffer_t;
 
 typedef struct {
   uint8_t alignment;
-  void *  buffer;
+  buffer_t * buffer;
   size_t  size;
 } lbuf_t;
 
@@ -50,6 +53,13 @@ typedef struct {
   uint32_t offset;
   uint8_t  length;
 } mask_t;
+
+uint8_t buffer_ref[ 4 ] = { 0xFF, 0x7F, 0x80, 0x00 };
+
+buffer_t buffer = {
+  buffer_ref,
+  0
+};
 
 // TODO: move these macros and rawget to a utils file?
 #define NUM_BITS_SECOND_POS(alignment, mask, overflow) \
@@ -60,16 +70,17 @@ typedef struct {
 
 #define APPLY_MASK(type, lbuf, mask, buffer_pos, overflow, result) \
   do { \
-    type *  buffer  = (type *) lbuf->buffer;                               \
-    uint8_t rshift  = COMPL_NUM_BITS_FIRST_POS(alignment, mask, overflow); \
-    uint8_t lshift  = NUM_BITS_SECOND_POS(     alignment, mask, overflow); \
-    type    bitmask = (type) -1 >> rshift << lshift;                       \
-    result          = (type) buffer[ buffer_pos ] & bitmask;               \
-    if (overflow)                                                          \
-      result = (result << overflow) | (buffer[ buffer_pos + 1 ] >>         \
-          (alignment - overflow));                                         \
-    else                                                                   \
-      result >>= lshift;                                                   \
+    buffer_t * buffer = lbuf->buffer;                                        \
+    type * ref        = (type *) buffer->ref;                                \
+    uint8_t rshift    = COMPL_NUM_BITS_FIRST_POS(alignment, mask, overflow); \
+    uint8_t lshift    = NUM_BITS_SECOND_POS(     alignment, mask, overflow); \
+    type bitmask      = (type) -1 >> rshift << lshift;                       \
+    result            = (type) ref[ buffer_pos ] & bitmask;                  \
+    if (overflow)                                                            \
+      result = (result << overflow) | (ref[ buffer_pos + 1 ] >>              \
+          (alignment - overflow));                                           \
+    else                                                                     \
+      result >>= lshift;                                                     \
     printf("[%s:%s:%d]: overflow: %d, lshift: %d, rshift = %d, buffer_pos: %d" \
       ", bitmask: %X\n", __FUNCTION__, __FILE__, __LINE__, \
       overflow, lshift, rshift, buffer_pos, (uint32_t)bitmask);\
@@ -128,9 +139,10 @@ static int64_t rawget(lbuf_t * lbuf, mask_t * mask)
 }
 
 // TODO: pass a free function
-lbuf_t * lbuf_new(lua_State * L, void * buffer, size_t size)
+lbuf_t * lbuf_new(lua_State * L, buffer_t * buffer, size_t size)
 {
   lbuf_t * lbuf = lua_newuserdata(L, sizeof(lbuf_t));
+  buffer->count += 1;
   lbuf->buffer  = buffer;
   lbuf->size    = size;
   lbuf->alignment = 8;
@@ -142,11 +154,12 @@ lbuf_t * lbuf_new(lua_State * L, void * buffer, size_t size)
 // TODO: implement lbuf.new(string | table)
 static int lbuf_new_(lua_State *L)
 {
-  lbuf_t * lbuf = lbuf_new(L, buffer, 4);
+  lbuf_t * lbuf = lbuf_new(L, &buffer, 4);
 
 #ifdef DEBUG
   printf("[%s:%s:%d]: buffer: ", __FUNCTION__, __FILE__, __LINE__);
-  for (int i = 0; i < 4; i++) printf("%#x, ", (int) buffer[ i ]);
+  for (int i = 0; i < 4; i++) printf("%#x, ", ((int *) buffer.ref)[ i ]);
+  printf("count: %u", buffer.count);
   printf("\n");
 #endif
   return 1;
@@ -226,6 +239,9 @@ static int lbuf_gc(lua_State *L)
   lua_settable(L, -3);
 
   // TODO: free lbuf->buffer if ref count == 0
+  buffer_t * buffer = lbuf->buffer;
+  if (--buffer->count == 0)
+     printf("buffer must be freed\n");
   return 0;
 }
 
