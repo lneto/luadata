@@ -1,50 +1,128 @@
+/*
+* Copyright (C) 2013 Lourival Vieira Neto <lourival.neto@gmail.com>.
+* All rights reserved.
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+* 
+* The above copyright notice and this permission notice shall be included in
+* all copies or substantial portions of the Software.
+* 
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+* THE SOFTWARE.
+*/
+
 #include <stdio.h>
 #include <stdint.h>
 
 #include <lua.h>
 #include <lauxlib.h>
 
+#define DEBUG
+
 // TODO:  - clean up!
 //        - review int types!
-//        - named fields
-//        - fix rawget
 //        - gc
-//        - dettach buffer
 //        - improve limits and other verifications
+// NEXT_VERSION:
+//        - named fields
 //        - implement set and rawset
 
-uint8_t buffer[ 4 ] = { 1 , 2, 4, 8 };
+uint8_t buffer[ 4 ] = { 0xFF, 0x7F, 0x80, 0x00 };
 
 typedef struct {
-  uint8_t align;
+  uint8_t alignment;
   void *  buffer;
   size_t  size;
 } lbuf_t;
 
 typedef struct {
-  uint8_t bit_ix;
-  uint8_t bit_len;
+// TODO: use two ix levels (bit and align (e.g., byte))?
+  uint32_t offset;
+  uint8_t  length;
 } mask_t;
 
-// TODO: check limit
-// TODO: pass mask instead bit_{ix, len}
-static uint8_t rawget(lbuf_t * lbuf, uint8_t bit_ix, uint8_t bit_len)
+#define NUM_BITS_SECOND_POS(alignment, mask, overflow) \
+  (overflow ? 0 : (alignment - (mask->offset % alignment) - mask->length)); \
+
+#define COMPL_NUM_BITS_FIRST_POS(alignment, mask, overflow) \
+   (alignment - (mask->length - overflow)); \
+
+#define APPLY_MASK(type, lbuf, mask, buffer_pos, overflow, result) \
+  do { \
+    type * buffer = (type *) lbuf->buffer; \
+    uint8_t rshift = COMPL_NUM_BITS_FIRST_POS(alignment, mask, overflow); \
+    uint8_t lshift = NUM_BITS_SECOND_POS(alignment, mask, overflow); \
+    type bitmask = (type) -1 >> rshift << lshift; \
+    result = (type) buffer[ buffer_pos ] & bitmask; \
+    if (overflow) \
+      result = (result << overflow) | (buffer[ buffer_pos + 1 ] >> \
+          (alignment - overflow)); \
+    else \
+      result >>= lshift; \
+    printf("[%s:%s:%d]: overflow: %d, lshift: %d, rshift = %d, buffer_pos: %d" \
+      ", bitmask: %X\n", __FUNCTION__, __FILE__, __LINE__, \
+      overflow, lshift, rshift, buffer_pos, (uint32_t)bitmask);\
+  } while(0)
+
+static int64_t rawget(lbuf_t * lbuf, mask_t * mask);
+
+static uint8_t get_alignment(lbuf_t * lbuf, mask_t * mask)
 {
-  uint8_t * buffer = lbuf->buffer;
-  uint8_t byte_ix = bit_ix / 8;
+  uint8_t alignment = lbuf->alignment;
+  if (mask->length <= 8)
+    alignment = 8;
+  else if (mask->length <= 16)
+    alignment = 16;
+  else if (mask->length <= 32)
+    alignment = 32;
+  else if (mask->length <= 64)
+    alignment = 64;
+  return alignment;
+}
 
-  uint8_t bit_end  = bit_ix + bit_len - 1;
-  uint8_t bit_upper_limit = 8 * (byte_ix + 1);
-  uint8_t overflow = bit_end >= bit_upper_limit ? (bit_end % bit_upper_limit) + 1 : 0;
-  uint8_t left_shift = !overflow ? (8 - (bit_ix % 8) - bit_len) : 0;
-  uint8_t mask     = ((uint8_t) -1 >> (8 - (bit_len - overflow))) << left_shift;
+// TODO: check limit
+static int64_t rawget(lbuf_t * lbuf, mask_t * mask)
+{
+  uint8_t  alignment       = get_alignment(lbuf, mask);
+  uint32_t buffer_pos      = mask->offset / alignment; 
+  uint32_t alignment_limit = alignment * (buffer_pos + 1);
+  uint32_t last_bit_pos    = mask->offset + mask->length - 1;
+  uint8_t  overflow        = last_bit_pos >= alignment_limit ? 
+    (last_bit_pos % alignment_limit) + 1 : 0;
 
-  uint8_t result = (uint8_t) buffer[ byte_ix ] & mask;
-
-  if (overflow)
-    result = (result << overflow) | (buffer[ byte_ix + 1 ] >> (8 - overflow));
-  else
-    result = result >> left_shift;
+  int64_t result = 0;
+#ifdef DEBUG
+  printf("[%s:%s:%d]: alignment: %d, mask->offset: %d, mask->length: %d\n",
+      __FUNCTION__, __FILE__, __LINE__, alignment, mask->offset, mask->length);
+#endif
+  switch (alignment) {
+    case 8:
+      APPLY_MASK(uint8_t, lbuf, mask, buffer_pos, overflow, result);
+      break;
+    case 16:
+      APPLY_MASK(uint16_t, lbuf, mask, buffer_pos, overflow, result);
+      break;
+    case 32:
+      APPLY_MASK(uint32_t, lbuf, mask, buffer_pos, overflow, result);
+      break;
+    case 64:
+      APPLY_MASK(uint64_t, lbuf, mask, buffer_pos, overflow, result);
+      break;
+  }
+#ifdef DEBUG
+  printf("[%s:%s:%d]: result: %#llx\n",
+      __FUNCTION__, __FILE__, __LINE__, (uint64_t) result, result);
+#endif
   return result;
 }
 
@@ -52,9 +130,9 @@ static uint8_t rawget(lbuf_t * lbuf, uint8_t bit_ix, uint8_t bit_len)
 lbuf_t * lbuf_new(lua_State * L, void * buffer, size_t size)
 {
   lbuf_t * lbuf = lua_newuserdata(L, sizeof(lbuf_t));
-  lbuf->buffer = buffer;
-  lbuf->size   = size;
-  lbuf->align  = 8;
+  lbuf->buffer  = buffer;
+  lbuf->size    = size;
+  lbuf->alignment = 8;
   luaL_getmetatable(L, "lbuf");
   lua_setmetatable(L, -2);
   return lbuf;
@@ -64,6 +142,12 @@ lbuf_t * lbuf_new(lua_State * L, void * buffer, size_t size)
 static int lbuf_new_(lua_State *L)
 {
   lbuf_t * lbuf = lbuf_new(L, buffer, 4);
+
+#ifdef DEBUG
+  printf("[%s:%s:%d]: buffer: ", __FUNCTION__, __FILE__, __LINE__);
+  for (int i = 0; i < 4; i++) printf("%#x, ", (int) buffer[ i ]);
+  printf("\n");
+#endif
   return 1;
 }
 
@@ -73,8 +157,8 @@ static int lbuf_mask(lua_State *L)
   lbuf_t * lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
 
   if (lua_isnumber(L, 2)) {
-    // TODO: when set align, erase mask table!
-    lbuf->align = (uint8_t) lua_tointeger(L, 2);
+      // TODO: when set align, erase mask table!
+    lbuf->alignment = (uint8_t) lua_tointeger(L, 2);
     lua_pop(L, 1);
     return 1;
   }
@@ -95,8 +179,8 @@ static int lbuf_mask(lua_State *L)
       continue;
     }
 
-    uint8_t bit_len = lua_tonumber(L, -1);
-    if (offset + bit_len > lbuf->size * 8) { 
+    uint8_t length = lua_tonumber(L, -1);
+    if (offset + length > lbuf->size * 8) { 
       lua_pop(L, 2);
       break;
     }
@@ -107,10 +191,10 @@ static int lbuf_mask(lua_State *L)
     luaL_getmetatable(L, "lbuf.mask");
     lua_setmetatable(L, -2);
 
-    mask->bit_ix  = offset;
+    mask->offset = offset;
     // TODO: also handle tables
-    mask->bit_len = bit_len;
-    offset        = mask->bit_ix + mask->bit_len;
+    mask->length = length;
+    offset       = mask->offset + mask->length;
 
     lua_settable(L, 2); // mask_table[ k ] = mask
 
@@ -156,12 +240,13 @@ static int lbuf_get(lua_State *L)
   lua_gettable(L, -2); // [ __masks[ lbuf ] | lbuf | __masks | (...) ]
   if (!lua_istable(L, -1)) {
     uint8_t ix = (uint8_t) luaL_checkinteger(L, 2);
-    if (ix < 1 || ix * lbuf->align > lbuf->size * 8) { 
+    if (ix < 1 || ix * lbuf->alignment > lbuf->size * 8) { 
       lua_pushnil(L);
-      return 0;
+      return 1;
     }
 
-    uint8_t value = rawget(lbuf, (ix - 1) * lbuf->align, lbuf->align);
+    mask_t mask = { (ix - 1) * lbuf->alignment, lbuf->alignment };
+    int64_t value = rawget(lbuf, &mask);
     lua_pushnumber(L, value);
     return 1;
   }
@@ -171,10 +256,9 @@ static int lbuf_get(lua_State *L)
   if (lua_isnil(L, -1)) 
     return 1;
 
-  //mask_t * mask = (mask_t *) luaL_checkudata(L, 1, "lbuf.mask");
   mask_t * mask = (mask_t *) luaL_checkudata(L, -1, "lbuf.mask");
 
-  uint8_t value = rawget(lbuf, mask->bit_ix, mask->bit_len);
+  int64_t value = rawget(lbuf, mask);
   lua_pushnumber(L, value);
   return 1;
 }
@@ -190,7 +274,8 @@ static int lbuf_rawget(lua_State *L)
     return 1;
   }
 
-  uint8_t value = rawget(lbuf, ix, len);
+  mask_t mask = { ix, len };
+  int64_t value = rawget(lbuf, &mask);
   lua_pushnumber(L, value);
   return 1;
 }
