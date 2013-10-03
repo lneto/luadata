@@ -51,6 +51,7 @@ typedef struct {
   uint8_t  length;
 } mask_t;
 
+// TODO: move these macros and rawget to a utils file?
 #define NUM_BITS_SECOND_POS(alignment, mask, overflow) \
   (overflow ? 0 : (alignment - (mask->offset % alignment) - mask->length)); \
 
@@ -59,16 +60,16 @@ typedef struct {
 
 #define APPLY_MASK(type, lbuf, mask, buffer_pos, overflow, result) \
   do { \
-    type * buffer = (type *) lbuf->buffer; \
-    uint8_t rshift = COMPL_NUM_BITS_FIRST_POS(alignment, mask, overflow); \
-    uint8_t lshift = NUM_BITS_SECOND_POS(alignment, mask, overflow); \
-    type bitmask = (type) -1 >> rshift << lshift; \
-    result = (type) buffer[ buffer_pos ] & bitmask; \
-    if (overflow) \
-      result = (result << overflow) | (buffer[ buffer_pos + 1 ] >> \
-          (alignment - overflow)); \
-    else \
-      result >>= lshift; \
+    type *  buffer  = (type *) lbuf->buffer;                               \
+    uint8_t rshift  = COMPL_NUM_BITS_FIRST_POS(alignment, mask, overflow); \
+    uint8_t lshift  = NUM_BITS_SECOND_POS(     alignment, mask, overflow); \
+    type    bitmask = (type) -1 >> rshift << lshift;                       \
+    result          = (type) buffer[ buffer_pos ] & bitmask;               \
+    if (overflow)                                                          \
+      result = (result << overflow) | (buffer[ buffer_pos + 1 ] >>         \
+          (alignment - overflow));                                         \
+    else                                                                   \
+      result >>= lshift;                                                   \
     printf("[%s:%s:%d]: overflow: %d, lshift: %d, rshift = %d, buffer_pos: %d" \
       ", bitmask: %X\n", __FUNCTION__, __FILE__, __LINE__, \
       overflow, lshift, rshift, buffer_pos, (uint32_t)bitmask);\
