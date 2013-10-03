@@ -148,7 +148,15 @@ static int lbuf_mask(lua_State *L)
 
 static int lbuf_gc(lua_State *L)
 {
-  // TODO: remove entry from masks table! (mt.masks[self] = nil)
+  lbuf_t * lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
+
+  // remove entry from masks table (mt.masks[self] = nil)
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "__masks");
+  lua_pushvalue(L, 1);
+  lua_pushnil(L);
+  lua_settable(L, -3);
+
   // TODO: free lbuf->buffer if ref count == 0
   return 0;
 }
