@@ -81,7 +81,7 @@ static int buf_nref_inc(lua_State * L, void * buffer)
   lua_settable(L, -3);
   lua_pop(L, 2); // pops field __nrefs, metatable
 #ifdef DEBUG
-  printf("nrefs[ %#x ]: %d\n", buffer, c);
+  printf("nrefs[ %p ]: %td\n", buffer, c);
 #endif
 
   return 1;
@@ -108,7 +108,7 @@ static int buf_nref_dec(lua_State * L, void * buffer)
     lua_pushinteger(L, c);
     lua_settable(L, -3);
 #ifdef DEBUG
-    printf("nrefs[ %#x ]: %d\n", buffer, c);
+    printf("nrefs[ %p ]: %td\n", buffer, c);
 #endif
   }
   lua_pop(L, 2); // pops field __nrefs, metatable
