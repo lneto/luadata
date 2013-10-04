@@ -127,6 +127,65 @@ static int64_t rawget(lbuf_t * lbuf, mask_t * mask)
   return result;
 }
 
+static int buf_nref_inc(lua_State * L, void * buffer)
+{
+  lua_Integer c    = 1;
+  lbuf_t *    lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "__nrefs"); // __nrefs
+  lua_pushlightuserdata(L, buffer); // __nrefs[ buffer ]
+  lua_gettable(L, -2);
+  if (lua_isnumber(L, -1))
+    c = lua_tointeger(L, -1) + (lua_Integer) 1;
+  else if (!lua_isnil(L, -1)) {
+    lua_pop(L, 3); // pops value, field __nrefs, metatable
+
+    return 0;
+  }
+
+  lua_pop(L, 1); // pops value
+  lua_pushlightuserdata(L, buffer); // __nrefs[ buffer ]
+  lua_pushinteger(L, c);
+  lua_settable(L, -3);
+  lua_pop(L, 2); // pops field __nrefs, metatable
+#ifdef DEBUG
+  printf("nrefs[ %#x ]: %d\n", buffer, c);
+#endif
+
+  return 1;
+}
+
+static int buf_nref_dec(lua_State * L, void * buffer)
+{
+  lbuf_t * lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
+
+  lua_getmetatable(L, 1);
+  lua_getfield(L, -1, "__nrefs"); // __nrefs
+  lua_pushlightuserdata(L, buffer); // __nrefs[ buffer ]
+  lua_gettable(L, -2);
+  if (!lua_isnumber(L, -1)) {
+    lua_pop(L, 3); // pops value, field __nrefs, metatable
+
+    return 0;
+  }
+  lua_Integer c = lua_tointeger(L, -1);
+  lua_pop(L, 1); // pops value
+  if (c > 0) {
+    c -= (lua_Integer) 1;
+    lua_pushlightuserdata(L, buffer); // __nrefs[ buffer ]
+    lua_pushinteger(L, c);
+    lua_settable(L, -3);
+#ifdef DEBUG
+    printf("nrefs[ %#x ]: %d\n", buffer, c);
+#endif
+  }
+  lua_pop(L, 2); // pops field __nrefs, metatable
+  lua_pushinteger(L, c);
+
+  return 1;
+}
+
 // TODO: pass a free function
 lbuf_t * lbuf_new(lua_State * L, void * buffer, size_t size)
 {
@@ -136,6 +195,7 @@ lbuf_t * lbuf_new(lua_State * L, void * buffer, size_t size)
   lbuf->alignment = 8;
   luaL_getmetatable(L, "lbuf");
   lua_setmetatable(L, -2);
+  buf_nref_inc(L, buffer);
   return lbuf;
 }
 
@@ -180,7 +240,7 @@ static int lbuf_mask(lua_State *L)
       continue;
     }
 
-    uint8_t length = lua_tonumber(L, -1);
+    uint8_t length = lua_tointeger(L, -1);
     if (offset + length > lbuf->size * 8) { 
       lua_pop(L, 2);
       break;
@@ -225,8 +285,18 @@ static int lbuf_gc(lua_State *L)
   lua_pushnil(L);
   lua_settable(L, -3);
 
-  // TODO: free lbuf->buffer if ref count == 0
-  return 0;
+  if (!buf_nref_dec(L, lbuf->buffer))
+    return 0;
+
+  lua_Integer c = lua_tointeger(L, -1);
+  if (c == 0) {
+#ifdef DEBUG
+    // TODO: free lbuf->buffer
+    printf("[%s:%s:%d]: lbuf->buffer must be freed.\n", __FUNCTION__, __FILE__, __LINE__);
+#endif
+  }
+
+  return 1;
 }
 
 static int lbuf_get(lua_State *L)
@@ -313,7 +383,9 @@ int luaopen_lbuf(lua_State *L)
   luaL_newmetatable(L, "lbuf");
   luaL_register(L, NULL, lbuf_m);
   lua_newtable(L);
-  lua_setfield(L, -2, "__masks");
+  lua_setfield(L, 2, "__masks");
+  lua_newtable(L);
+  lua_setfield(L, 2, "__nrefs");
   luaL_register(L, "lbuf", lbuf);
 
   luaL_newmetatable(L, "lbuf.mask");
