@@ -240,7 +240,7 @@ static int lbuf_mask(lua_State *L)
       continue;
     }
 
-    uint8_t length = lua_tointeger(L, -1);
+    uint8_t length = lua_tonumber(L, -1);
     if (offset + length > lbuf->size * 8) { 
       lua_pop(L, 2);
       break;
