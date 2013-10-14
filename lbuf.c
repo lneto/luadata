@@ -23,11 +23,17 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include <lua.h>
 #include <lauxlib.h>
 
+#include <arpa/inet.h>
+
+#include "bit_util.h"
+
 #define DEBUG
+// TODO: create DEBUG(...) macro!
 
 // TODO:  - clean up!
 //        - review int types!
@@ -37,12 +43,13 @@
 //        - named fields
 //        - implement set and rawset
 
-uint8_t buffer[ 4 ] = { 0xFF, 0x7F, 0x80, 0x00 };
+uint8_t buffer[ 4 ] = { 0xFF, 0x00, 0xFF, 0x00 };
 
 typedef struct {
   uint8_t alignment;
   void *  buffer;
   size_t  size;
+  bool    net;
 } lbuf_t;
 
 typedef struct {
@@ -51,82 +58,6 @@ typedef struct {
   uint8_t  length;
 } mask_t;
 
-// TODO: move these macros and rawget to a utils file?
-#define NUM_BITS_SECOND_POS(alignment, mask, overflow) \
-  (overflow ? 0 : (alignment - (mask->offset % alignment) - mask->length)); \
-
-#define COMPL_NUM_BITS_FIRST_POS(alignment, mask, overflow) \
-   (alignment - (mask->length - overflow)); \
-
-#define APPLY_MASK(type, lbuf, mask, buffer_pos, overflow, result) \
-  do { \
-    type *  buffer  = (type *) lbuf->buffer;                               \
-    uint8_t rshift  = COMPL_NUM_BITS_FIRST_POS(alignment, mask, overflow); \
-    uint8_t lshift  = NUM_BITS_SECOND_POS(     alignment, mask, overflow); \
-    type    bitmask = (type) -1 >> rshift << lshift;                       \
-    result          = (type) buffer[ buffer_pos ] & bitmask;               \
-    if (overflow)                                                          \
-      result = (result << overflow) | (buffer[ buffer_pos + 1 ] >>         \
-          (alignment - overflow));                                         \
-    else                                                                   \
-      result >>= lshift;                                                   \
-    printf("[%s:%s:%d]: overflow: %d, lshift: %d, rshift = %d, buffer_pos: %d" \
-      ", bitmask: %X\n", __FUNCTION__, __FILE__, __LINE__, \
-      overflow, lshift, rshift, buffer_pos, (uint32_t)bitmask);\
-  } while(0)
-
-static int64_t rawget(lbuf_t * lbuf, mask_t * mask);
-
-static uint8_t get_alignment(lbuf_t * lbuf, mask_t * mask)
-{
-  uint8_t alignment = lbuf->alignment;
-  if (mask->length <= 8)
-    alignment = 8;
-  else if (mask->length <= 16)
-    alignment = 16;
-  else if (mask->length <= 32)
-    alignment = 32;
-  else if (mask->length <= 64)
-    alignment = 64;
-  return alignment;
-}
-
-// TODO: check limit
-static int64_t rawget(lbuf_t * lbuf, mask_t * mask)
-{
-  uint8_t  alignment       = get_alignment(lbuf, mask);
-  uint32_t buffer_pos      = mask->offset / alignment; 
-  uint32_t alignment_limit = alignment * (buffer_pos + 1);
-  uint32_t last_bit_pos    = mask->offset + mask->length - 1;
-  uint8_t  overflow        = last_bit_pos >= alignment_limit ? 
-    (last_bit_pos % alignment_limit) + 1 : 0;
-
-  int64_t result = 0;
-#ifdef DEBUG
-  printf("[%s:%s:%d]: alignment: %d, mask->offset: %d, mask->length: %d\n",
-      __FUNCTION__, __FILE__, __LINE__, alignment, mask->offset, mask->length);
-#endif
-  switch (alignment) {
-    case 8:
-      APPLY_MASK(uint8_t, lbuf, mask, buffer_pos, overflow, result);
-      break;
-    case 16:
-      APPLY_MASK(uint16_t, lbuf, mask, buffer_pos, overflow, result);
-      break;
-    case 32:
-      APPLY_MASK(uint32_t, lbuf, mask, buffer_pos, overflow, result);
-      break;
-    case 64:
-      APPLY_MASK(uint64_t, lbuf, mask, buffer_pos, overflow, result);
-      break;
-  }
-#ifdef DEBUG
-  printf("[%s:%s:%d]: result: %#llx\n",
-      __FUNCTION__, __FILE__, __LINE__, (uint64_t) result, result);
-#endif
-  return result;
-}
-
 // TODO: pass a free function
 lbuf_t * lbuf_new(lua_State * L, void * buffer, size_t size)
 {
@@ -134,6 +65,7 @@ lbuf_t * lbuf_new(lua_State * L, void * buffer, size_t size)
   lbuf->buffer  = buffer;
   lbuf->size    = size;
   lbuf->alignment = 8;
+  lbuf->net = true;
   luaL_getmetatable(L, "lbuf");
   lua_setmetatable(L, -2);
   return lbuf;
@@ -227,6 +159,7 @@ static int lbuf_get(lua_State *L)
 
   lua_getmetatable(L, 1);
   
+  // access to methods (such as mask())
   if (lua_isstring(L, 2)) {
     lua_pushvalue(L, 2);
     lua_gettable(L, -2);
@@ -234,7 +167,7 @@ static int lbuf_get(lua_State *L)
       return 1;
     else
       lua_pop(L, 1);
-  }    
+  }
 
   lua_getfield(L, -1, "__masks");
   lua_pushvalue(L, 1); // [ lubf | __masks | getmetatable(lbuf) | ix | lbuf ]
@@ -246,8 +179,9 @@ static int lbuf_get(lua_State *L)
       return 1;
     }
 
-    mask_t mask = { (ix - 1) * lbuf->alignment, lbuf->alignment };
-    int64_t value = rawget(lbuf, &mask);
+    // TODO: create get_offset macro
+    uint32_t offset = (ix - 1) * lbuf->alignment;
+    int64_t  value = get_bits(lbuf->buffer, offset, lbuf->alignment, lbuf->net);
     lua_pushnumber(L, value);
     return 1;
   }
@@ -259,9 +193,41 @@ static int lbuf_get(lua_State *L)
 
   mask_t * mask = (mask_t *) luaL_checkudata(L, -1, "lbuf.mask");
 
-  int64_t value = rawget(lbuf, mask);
+  int64_t value = get_bits(lbuf->buffer, mask->offset, mask->length, lbuf->net);
   lua_pushnumber(L, value);
   return 1;
+}
+
+static int lbuf_set(lua_State *L)
+{
+  lbuf_t * lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
+  int64_t value = (int64_t) lua_tointeger(L, 3);
+
+  lua_getmetatable(L, 1);
+
+  lua_getfield(L, -1, "__masks");
+  lua_pushvalue(L, 1); // [ lubf | __masks | getmetatable(lbuf) | ix | lbuf ]
+  lua_gettable(L, -2); // [ __masks[ lbuf ] | lbuf | __masks | (...) ]
+  if (!lua_istable(L, -1)) {
+    uint8_t ix = (uint8_t) luaL_checkinteger(L, 2);
+    if (ix < 1 || ix * lbuf->alignment > lbuf->size * 8) { 
+      return 0;
+    }
+
+    uint32_t offset = (ix - 1) * lbuf->alignment;
+    set_bits(lbuf->buffer, offset, lbuf->alignment, lbuf->net, value);
+    return 0;
+  }
+
+  lua_pushvalue(L, 2); // [ ix | __masks[ lbuf ] | (...) ]
+  lua_gettable(L, -2); // [ __masks[ lbuf ][ ix ] | ix | __masks[ lbuf ] | (...) ]
+  if (lua_isnil(L, -1)) 
+    return 0;
+
+  mask_t * mask = (mask_t *) luaL_checkudata(L, -1, "lbuf.mask");
+
+  set_bits(lbuf->buffer, mask->offset, mask->length, lbuf->net, value);
+  return 0;
 }
 
 static int lbuf_rawget(lua_State *L)
@@ -275,11 +241,12 @@ static int lbuf_rawget(lua_State *L)
     return 1;
   }
 
-  mask_t mask = { ix, len };
-  int64_t value = rawget(lbuf, &mask);
+  int64_t value = get_bits(lbuf->buffer, ix, len, lbuf->net);
   lua_pushnumber(L, value);
   return 1;
 }
+
+// TODO: implement rawset!
 
 static const luaL_Reg lbuf[ ] = {
   {"new", lbuf_new_},
@@ -292,6 +259,7 @@ static const luaL_Reg lbuf_m[ ] = {
   {"mask", lbuf_mask},
   {"rawget", lbuf_rawget},
   {"__index", lbuf_get},
+  {"__newindex", lbuf_set},
   {"__gc", lbuf_gc},
   {NULL, NULL}
 };
