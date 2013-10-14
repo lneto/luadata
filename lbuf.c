@@ -23,11 +23,14 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include <lua.h>
 #include <lauxlib.h>
 
 #include <arpa/inet.h>
+
+#include "bit_util.h"
 
 #define DEBUG
 // TODO: create DEBUG(...) macro!
@@ -46,7 +49,7 @@ typedef struct {
   uint8_t alignment;
   void *  buffer;
   size_t  size;
-  uint8_t is_net;
+  bool    net;
 } lbuf_t;
 
 typedef struct {
@@ -55,162 +58,6 @@ typedef struct {
   uint8_t  length;
 } mask_t;
 
-// TODO: move these macros and rawget to a utils file!
-#define RIGHT_OFFSET(offset, length, alignment, overflow)       \
-  (overflow ? 0 : (alignment - (offset % alignment) - length)) 
-
-#define NUM_BITS_OFF(length, alignment, overflow) \
-   (alignment - (length - overflow)) 
-
-#define OVERFLOW_BITS(buffer_, pos, alignment, overflow, is_net_buffer, ntoh) \
-  ((is_net_buffer ? ntoh(buffer_[ pos + 1 ]) :                                \
-                    buffer_[ pos + 1 ]) >> (alignment - overflow))
-
-#define RAW_GET(type, alignment, overflow, buffer, pos, right_offset, num_bits_off,     \
-    is_net_buffer, ntoh, result)                                                        \
-  do {                                                                                  \
-    type * buffer_ = (type *) buffer;                                                   \
-    type   bitmask = (type) -1 >> num_bits_off << right_offset;                         \
-    type   result_ = (is_net_buffer ? ntoh(buffer_[ pos ]) : buffer_[ pos ]) & bitmask; \
-    result_ = overflow ?                                                                \
-      (result_ << overflow) | OVERFLOW_BITS(buffer_, pos, alignment, overflow,          \
-          is_net_buffer, ntoh) :                                                        \
-      result_ >> right_offset;                                                          \
-    result = (int64_t) result_;                                                         \
-    printf("[%s:%s:%d]: overflow: %d, right_offset: %d, num_bits_off = %d,"             \
-    " pos: %d, bitmask: %X\n", __FUNCTION__, __FILE__, __LINE__,                        \
-      overflow, right_offset, num_bits_off, pos, (uint32_t)bitmask);                    \
-  } while(0)
-
-// TODO: clean it up a little!
-#define RAW_SET(type, alignment, overflow, buffer, pos, right_offset, num_bits_off,     \
-    is_net_buffer, ntoh, hton, value)                                                   \
-  do {                                                                                  \
-    type * buffer_ = (type *) buffer;                                                   \
-    type   bitmask = (type) -1 >> num_bits_off << right_offset;                         \
-    type   value_  = (type) value;                                                      \
-    printf("value_: %#x\n", (int) value_); \
-    type   result  = (is_net_buffer ? ntoh(buffer_[ pos ]) : buffer_[ pos ]) & ~bitmask \
-                     | (value_ << right_offset >> overflow);                            \
-    printf("result: %#x\n", (int) result); \
-    buffer_[ pos ] = is_net_buffer ? hton(result) : result;                             \
-    if (overflow) {                                                                     \
-      result = (is_net_buffer ? ntoh(buffer_[ pos + 1 ]) : buffer_[ pos + 1 ]) &        \
-        ~((type) -1 << (alignment - overflow)) | (value_ << (alignment - overflow));    \
-      buffer_[ pos + 1 ] = is_net_buffer ? hton(result) : result;                       \
-    }                                                                                   \
-    printf("[%s:%s:%d]: overflow: %d, right_offset: %d, num_bits_off: %d, pos: %d, "    \
-    "bitmask: %X, buffer[ pos ]: %#X, buffer[ pos + 1 ]: %#X, result: %#X, value: %#X\n"\
-    ,__FUNCTION__, __FILE__, __LINE__, overflow, right_offset, num_bits_off, pos,       \
-    (uint32_t)bitmask, (int) buffer_[ pos ], (int) buffer_[ pos + 1 ], (int) result,    \
-    (int) value); \
-  } while(0)
-
-static int64_t rawget(lbuf_t * lbuf, mask_t * mask);
-static void    rawset(lbuf_t * lbuf, mask_t * mask, int64_t value);
-
-static uint8_t get_alignment(lbuf_t * lbuf, mask_t * mask)
-{
-  uint8_t alignment = lbuf->alignment;
-  if (mask->length <= 8)
-    alignment = 8;
-  else if (mask->length <= 16)
-    alignment = 16;
-  else if (mask->length <= 32)
-    alignment = 32;
-  else if (mask->length <= 64)
-    alignment = 64;
-  return alignment;
-}
-
-#define nop(x)  x
-
-static void rawset(lbuf_t * lbuf, mask_t * mask, int64_t value)
-{
-  uint8_t  alignment       = get_alignment(lbuf, mask);
-  uint32_t buffer_pos      = mask->offset / alignment; 
-  uint32_t alignment_limit = alignment * (buffer_pos + 1);
-  uint32_t last_bit_pos    = mask->offset + mask->length - 1;
-  uint8_t  overflow        = last_bit_pos >= alignment_limit ? 
-    (last_bit_pos % alignment_limit) + 1 : 0;
-
-  uint8_t num_bits_off = NUM_BITS_OFF(mask->length, alignment, overflow); 
-  uint8_t right_offset = RIGHT_OFFSET(mask->offset, mask->length, alignment, overflow); 
-
-#ifdef DEBUG
-  printf("[%s:%s:%d]: alignment: %d, mask->offset: %d, mask->length: %d\n",
-      __FUNCTION__, __FILE__, __LINE__, alignment, mask->offset, mask->length);
-#endif
-  switch (alignment) {
-    case 8:
-      RAW_SET(uint8_t, alignment, overflow, lbuf->buffer, buffer_pos,
-          right_offset, num_bits_off, lbuf->is_net, nop, nop, value);
-      break;
-    case 16:
-      RAW_SET(uint16_t, alignment, overflow, lbuf->buffer, buffer_pos,
-          right_offset, num_bits_off, lbuf->is_net, ntohs, htons, value);
-      break;
-    case 32:
-      RAW_SET(uint32_t, alignment, overflow, lbuf->buffer, buffer_pos,
-          right_offset, num_bits_off, lbuf->is_net, ntohl, htonl, value);
-      break;
-    case 64:
-      // TODO: implement ntohll and htonll
-      RAW_SET(uint64_t, alignment, overflow, lbuf->buffer, buffer_pos,
-          right_offset, num_bits_off, lbuf->is_net, nop, nop, value);
-      break;
-  }
-#if 0
-  printf("[%s:%s:%d]: result: %#llx\n",
-      __FUNCTION__, __FILE__, __LINE__, (uint64_t) result, result);
-#endif
-}
-
-// TODO: check limit
-static int64_t rawget(lbuf_t * lbuf, mask_t * mask)
-{
-  uint8_t  alignment       = get_alignment(lbuf, mask);
-  uint32_t buffer_pos      = mask->offset / alignment; 
-  uint32_t alignment_limit = alignment * (buffer_pos + 1);
-  uint32_t last_bit_pos    = mask->offset + mask->length - 1;
-  uint8_t  overflow        = last_bit_pos >= alignment_limit ? 
-    (last_bit_pos % alignment_limit) + 1 : 0;
-
-  uint8_t num_bits_off = NUM_BITS_OFF(mask->length, alignment, overflow); 
-  uint8_t right_offset = RIGHT_OFFSET(mask->offset, mask->length, alignment, overflow); 
-
-  int64_t result = 0;
-#ifdef DEBUG
-  printf("[%s:%s:%d]: alignment: %d, mask->offset: %d, mask->length: %d\n"
-         "right_offset = %d, num_bits_off = %d\n", __FUNCTION__, __FILE__, __LINE__,
-         alignment, mask->offset, mask->length, (int) right_offset, (int) num_bits_off);
-#endif
-  switch (alignment) {
-    case 8:
-      RAW_GET(uint8_t, alignment, overflow, lbuf->buffer, buffer_pos,
-          right_offset, num_bits_off, lbuf->is_net, nop, result);
-      break;
-    case 16:
-      RAW_GET(uint16_t, alignment, overflow, lbuf->buffer, buffer_pos,
-           right_offset, num_bits_off, lbuf->is_net, ntohs, result);
-      break;
-    case 32:
-      RAW_GET(uint32_t, alignment, overflow, lbuf->buffer, buffer_pos,
-           right_offset, num_bits_off, lbuf->is_net, ntohl, result);
-      break;
-    case 64:
-      // TODO: implement ntohll and htonll
-      RAW_GET(uint64_t, alignment, overflow, lbuf->buffer, buffer_pos,
-           right_offset, num_bits_off, lbuf->is_net, nop, result);
-      break;
-  }
-#ifdef DEBUG
-  printf("[%s:%s:%d]: result: %#llx\n",
-      __FUNCTION__, __FILE__, __LINE__, (long long unsigned int) result);
-#endif
-  return result;
-}
-
 // TODO: pass a free function
 lbuf_t * lbuf_new(lua_State * L, void * buffer, size_t size)
 {
@@ -218,7 +65,7 @@ lbuf_t * lbuf_new(lua_State * L, void * buffer, size_t size)
   lbuf->buffer  = buffer;
   lbuf->size    = size;
   lbuf->alignment = 8;
-  lbuf->is_net = 0;
+  lbuf->net = true;
   luaL_getmetatable(L, "lbuf");
   lua_setmetatable(L, -2);
   return lbuf;
@@ -332,8 +179,9 @@ static int lbuf_get(lua_State *L)
       return 1;
     }
 
-    mask_t mask = { (ix - 1) * lbuf->alignment, lbuf->alignment };
-    int64_t value = rawget(lbuf, &mask);
+    // TODO: create get_offset macro
+    uint32_t offset = (ix - 1) * lbuf->alignment;
+    int64_t  value = get_bits(lbuf->buffer, offset, lbuf->alignment, lbuf->net);
     lua_pushnumber(L, value);
     return 1;
   }
@@ -345,7 +193,7 @@ static int lbuf_get(lua_State *L)
 
   mask_t * mask = (mask_t *) luaL_checkudata(L, -1, "lbuf.mask");
 
-  int64_t value = rawget(lbuf, mask);
+  int64_t value = get_bits(lbuf->buffer, mask->offset, mask->length, lbuf->net);
   lua_pushnumber(L, value);
   return 1;
 }
@@ -366,8 +214,8 @@ static int lbuf_set(lua_State *L)
       return 0;
     }
 
-    mask_t mask = { (ix - 1) * lbuf->alignment, lbuf->alignment };
-    rawset(lbuf, &mask, value);
+    uint32_t offset = (ix - 1) * lbuf->alignment;
+    set_bits(lbuf->buffer, offset, lbuf->alignment, lbuf->net, value);
     return 0;
   }
 
@@ -378,7 +226,7 @@ static int lbuf_set(lua_State *L)
 
   mask_t * mask = (mask_t *) luaL_checkudata(L, -1, "lbuf.mask");
 
-  rawset(lbuf, mask, value);
+  set_bits(lbuf->buffer, mask->offset, mask->length, lbuf->net, value);
   return 0;
 }
 
@@ -393,8 +241,7 @@ static int lbuf_rawget(lua_State *L)
     return 1;
   }
 
-  mask_t mask = { ix, len };
-  int64_t value = rawget(lbuf, &mask);
+  int64_t value = get_bits(lbuf->buffer, ix, len, lbuf->net);
   lua_pushnumber(L, value);
   return 1;
 }
