@@ -45,11 +45,15 @@
 
 uint8_t buffer[ 4 ] = { 0xFF, 0x00, 0xFF, 0x00 };
 
+typedef void (* free_t) (void * ud, void * ptr);
+
 typedef struct {
   uint8_t alignment;
   void *  buffer;
   size_t  size;
   bool    net;
+  free_t  free;
+  void *  free_ud;
 } lbuf_t;
 
 typedef struct {
@@ -118,13 +122,15 @@ static int buf_nref_dec(lua_State * L, void * buffer)
 }
 
 // TODO: pass a free function
-lbuf_t * lbuf_new(lua_State * L, void * buffer, size_t size)
+lbuf_t * lbuf_new(lua_State * L, void * buffer, size_t size, free_t free)
 {
   lbuf_t * lbuf = lua_newuserdata(L, sizeof(lbuf_t));
   lbuf->buffer  = buffer;
   lbuf->size    = size;
   lbuf->alignment = 8;
   lbuf->net = true;
+  lbuf->free    = free;
+  lbuf->free_ud = NULL;
   luaL_getmetatable(L, "lbuf");
   lua_setmetatable(L, -2);
   buf_nref_inc(L, buffer);
@@ -134,7 +140,7 @@ lbuf_t * lbuf_new(lua_State * L, void * buffer, size_t size)
 // TODO: implement lbuf.new(string | table)
 static int lbuf_new_(lua_State *L)
 {
-  lbuf_t * lbuf = lbuf_new(L, buffer, 4);
+  lbuf_t * lbuf = lbuf_new(L, buffer, 4, NULL);
 
 #ifdef DEBUG
   printf("[%s:%s:%d]: buffer: ", __FUNCTION__, __FILE__, __LINE__);
@@ -221,12 +227,9 @@ static int lbuf_gc(lua_State *L)
     return 0;
 
   lua_Integer c = lua_tointeger(L, -1);
-  if (c == 0) {
-#ifdef DEBUG
-    // TODO: free lbuf->buffer
-    printf("[%s:%s:%d]: lbuf->buffer must be freed.\n", __FUNCTION__, __FILE__, __LINE__);
-#endif
-  }
+
+  if (c == 0 && lbuf->free != NULL)
+    lbuf->free(lbuf->free_ud, lbuf->buffer);
 
   return 1;
 }
