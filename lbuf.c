@@ -84,6 +84,14 @@ static int lbuf_new_(lua_State *L)
   return 1;
 }
 
+void luaN_getnfield(lua_State *L, int index, lua_Number number)
+{
+  lua_pushnumber(L, number);
+  if (index < 0)
+    index--;
+  lua_gettable(L, index);
+}
+
 static int lbuf_mask(lua_State *L)
 {
   // TODO: create and use isudata()
@@ -106,31 +114,72 @@ static int lbuf_mask(lua_State *L)
   /* table is in the stack at index 't' */
   lua_pushnil(L);  /* first key */
   while (lua_next(L, t) != 0) {
+    // TODO: adjust datatypes
+    size_t offset = 0;
+    size_t length = 0;
     /* uses 'key' (at index -2) and 'value' (at index -1) */
-    if (!lua_isnumber(L, -1)) {
-      lua_pop(L, 1);
-      continue;
+    int type = lua_type(L, -1);
+    printf("type: %s\n", lua_typename(L, type));
+    switch (type) {
+      case LUA_TNUMBER: // length
+        length = lua_tointeger(L, -1); 
+        break;
+      case LUA_TTABLE:  // { offset, len }
+      {
+        size_t len = lua_objlen(L, -1);
+        printf("len: %u\n", len);
+
+        // TODO: [lneto] handle __signed and __endian fields!
+        switch (len) {
+          default:
+          case 2:
+            luaN_getnfield(L, -1, 2);
+            length = lua_tointeger(L, -1); 
+            printf("length: %u\n", length);
+            lua_pop(L, 1);
+          case 1:
+            luaN_getnfield(L, -1, 1);
+            offset = lua_tointeger(L, -1); 
+            lua_pop(L, 1);
+          case 0: // do nothing
+          break;
+        }
+        lua_getfield(L, -1, "__offset");
+        if (!lua_isnil(L, -1))
+          offset = lua_tointeger(L, -1);
+        lua_pop(L, 1);
+
+        lua_getfield(L, -1, "__length");
+        if (!lua_isnil(L, -1))
+          length = lua_tointeger(L, -1);
+        lua_pop(L, 1);
+        break;
+      }
+      default:     // mask_table[ix] = nil (remove this item)
+        lua_pushvalue(L, -2); // push key (to set mask ud to this field)
+        lua_pushnil(L);
+        lua_settable(L, 2);
+        goto next;
+        break;
     }
 
-    uint8_t length = lua_tonumber(L, -1);
-    if (offset + length > lbuf->size * 8) { 
-      lua_pop(L, 2);
-      break;
-    }
+    if (offset + length > lbuf->size * 8)
+      goto next;
 
-    lua_pushvalue(L, -2); // key
+    lua_pushvalue(L, -2); // push key (to set mask ud to this field)
     //TODO: check if null
     mask_t * mask = lua_newuserdata(L, sizeof(mask_t)); 
     luaL_getmetatable(L, "lbuf.mask");
     lua_setmetatable(L, -2);
 
+    printf("offset = %u, length = %u\n", offset, length);
     mask->offset = offset;
-    // TODO: also handle tables
     mask->length = length;
     offset       = mask->offset + mask->length;
 
-    lua_settable(L, 2); // mask_table[ k ] = mask
+    lua_settable(L, 2); // mask_table[ key ] = mask
 
+next:
     /* removes 'value'; keeps 'key' for next iteration */
     lua_pop(L, 1);
   }
@@ -153,6 +202,7 @@ static int lbuf_gc(lua_State *L)
   return 0;
 }
 
+// TODO: separate Lua functions API in diff C functions
 static int lbuf_get(lua_State *L)
 {
   lbuf_t * lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
