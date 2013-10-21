@@ -62,24 +62,36 @@ typedef struct {
   uint8_t  length;
 } mask_t;
 
+// XXX: [review] I would rename this to inc_nref or inc_buffer_nref
+// (I think buf prefix is a little confusing)
 static int buf_nref_inc(lua_State * L, void * buffer)
 {
+// XXX: [review] rename c to a more expressive name, such as ref_count or nref.
+// XXX: [review] it should be init with 0, instead of 1. However, I would just
+// do 'lua_Integer nref += lua_tointeger(L, -1)' below.
   lua_Integer c    = 1;
+// XXX: [review] don't need to check it again, put a pre cond instead.
   lbuf_t *    lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
 
+// TODO: [lneto] create a get_nref function with this code
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "__nrefs"); // __nrefs
   lua_pushlightuserdata(L, buffer); // __nrefs[ buffer ]
   lua_gettable(L, -2);
+// XXX: [review] I think that is safe to simply call lua_tointeger() (without
+// checking if it is number). If you don't think so, you can return -1 if fail.
   if (lua_isnumber(L, -1))
     c = lua_tointeger(L, -1) + (lua_Integer) 1;
+// XXX: I think it is unecessary.
   else if (!lua_isnil(L, -1)) {
     lua_pop(L, 3); // pops value, field __nrefs, metatable
 
+// XXX: [review] return nref directly (instead using Lua stack).
     return 0;
   }
 
   lua_pop(L, 1); // pops value
+// TODO: [lneto] create a set_nref function with this code
   lua_pushlightuserdata(L, buffer); // __nrefs[ buffer ]
   lua_pushinteger(L, c);
   lua_settable(L, -3);
@@ -88,26 +100,36 @@ static int buf_nref_inc(lua_State * L, void * buffer)
   printf("nrefs[ %p ]: %td\n", buffer, c);
 #endif
 
+// XXX: [review] return nref directly (instead using Lua stack).
   return 1;
 }
 
+// XXX: [review] I would rename this to dec_nref or dec_buffer_nref
+// (I think buf prefix is a little confusing)
 static int buf_nref_dec(lua_State * L, void * buffer)
 {
+// XXX: [review] don't need to check it again, put a pre cond instead.
   lbuf_t * lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
 
+// TODO: [lneto] create a get_nref function with this code
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "__nrefs"); // __nrefs
   lua_pushlightuserdata(L, buffer); // __nrefs[ buffer ]
   lua_gettable(L, -2);
+// XXX: [review] I think that is safe to simply call lua_tointeger() (without
+// checking if it is number). If you don't think so, you can return -1 if fail.
   if (!lua_isnumber(L, -1)) {
     lua_pop(L, 3); // pops value, field __nrefs, metatable
 
+// XXX: [review] return nref directly (instead using Lua stack).
     return 0;
   }
   lua_Integer c = lua_tointeger(L, -1);
   lua_pop(L, 1); // pops value
   if (c > 0) {
+// XXX: [review] c-- would be just fine.
     c -= (lua_Integer) 1;
+// TODO: [lneto] create a set_nref function with this code
     lua_pushlightuserdata(L, buffer); // __nrefs[ buffer ]
     lua_pushinteger(L, c);
     lua_settable(L, -3);
@@ -118,10 +140,12 @@ static int buf_nref_dec(lua_State * L, void * buffer)
   lua_pop(L, 2); // pops field __nrefs, metatable
   lua_pushinteger(L, c);
 
+// XXX: [review] return nref directly (instead using Lua stack).
   return 1;
 }
 
 // TODO: pass a free function
+// XXX: [review] should receive 'void * free_ud' too
 lbuf_t * lbuf_new(lua_State * L, void * buffer, size_t size, free_t free)
 {
   lbuf_t * lbuf = lua_newuserdata(L, sizeof(lbuf_t));
@@ -130,6 +154,7 @@ lbuf_t * lbuf_new(lua_State * L, void * buffer, size_t size, free_t free)
   lbuf->alignment = 8;
   lbuf->net = true;
   lbuf->free    = free;
+// XXX: [review] set ud here.
   lbuf->free_ud = NULL;
   luaL_getmetatable(L, "lbuf");
   lua_setmetatable(L, -2);
@@ -223,14 +248,18 @@ static int lbuf_gc(lua_State *L)
   lua_pushnil(L);
   lua_settable(L, -3);
 
+// XXX: [review] get nref directly (instead using Lua stack).
   if (!buf_nref_dec(L, lbuf->buffer))
+// XXX: [review] shouldn't return here.
     return 0;
 
+// XXX: [review] rename c to a more expressive name, such as ref_count or nref.
   lua_Integer c = lua_tointeger(L, -1);
 
   if (c == 0 && lbuf->free != NULL)
     lbuf->free(lbuf->free_ud, lbuf->buffer);
 
+// XXX: [review] should return 0 here.
   return 1;
 }
 
@@ -354,6 +383,7 @@ int luaopen_lbuf(lua_State *L)
   luaL_newmetatable(L, "lbuf");
   luaL_register(L, NULL, lbuf_m);
   lua_newtable(L);
+// XXX: [review] change them back to relative indices
   lua_setfield(L, 2, "__masks");
   lua_newtable(L);
   lua_setfield(L, 2, "__nrefs");
