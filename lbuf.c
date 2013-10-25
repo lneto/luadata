@@ -134,7 +134,7 @@ static bool load_mask_field(lua_State *L, lbuf_t * lbuf, mask_t * mask)
     else if (lua_istable(L, -1)) // { offset, len }
       if (!load_mask_field_table(L, mask))
         return false;
-
+// TODO: retirar essa verificacao daqui,.
     if (mask->offset + mask->length > lbuf->size * 8)
       return false;
 
@@ -171,29 +171,52 @@ static void load_masks(lua_State *L, int index, lbuf_t * lbuf)
   }
 }
 
-static int lbuf_mask(lua_State *L)
+// desacoplar lbuf do load_masks.. (verificacao deve ser na aplicacao da
+// mascara)
+static int new_mask(lua_State *L)
 {
-  // TODO: create and use isudata()
+  if (lua_isnumber(L, 1)) {
+    // TODO: when set align, erase mask table!
+    // criar uma mascara contendo o alinhamento
+    lbuf->alignment = (uint8_t) lua_tointeger(L, 2);
+  }
+  else if (lua_istable(L, 1)) {
+    load_masks(L, 1, lbuf);
+  }
+  lua_pop(L, 1);
+  lua_pushnil(L);
+  return 1;
+}
+
+static void mask(lua_State *L, int nargs)
+{
   lbuf_t * lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
 
-  if (lua_isnumber(L, 2)) {
-    // TODO: when set align, erase mask table!
-    lbuf->alignment = (uint8_t) lua_tointeger(L, 2);
-    lua_pop(L, 1);
-    return 1;
-  }
-  else if (!lua_istable(L, 2)) {
-    lua_pushnil(L);
-    return 1;
-  }
-
-  load_masks(L, 2, lbuf);
+  lua_pushcfunction(L, new_mask);
+  lua_call(L, nargs - 1, 1);
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "__masks");
   lua_pushvalue(L, 1);
   lua_pushvalue(L, 2);
   lua_settable(L, -3); 
+}
+
+// TODO: here! ajustar os diferentes cenarios..
+//       - verificar numero de argumentos passados! (tornar seguro)
+//       - fechar essa funcao
+static int lbuf_mask(lua_State *L)
+{
+  int nargs = lua_gettop(L);
+  if (nargs < 1) {
+    lua_pushnil(L);
+    return 1;
+  }
+  
+  if (!lua_isuserdata(L, 1)) // method
+    return new_mask(L);
+
+  mask(L, nargs);
 
   // TODO: define what we should return
   lua_pushvalue(L, 1);
