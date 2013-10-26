@@ -84,56 +84,116 @@ static int lbuf_new_(lua_State *L)
   return 1;
 }
 
-static int lbuf_mask(lua_State *L)
+void lua_getnfield(lua_State *L, int index, lua_Number number)
 {
-  // TODO: create and use isudata()
-  lbuf_t * lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
+  lua_pushnumber(L, number);
+  if (index < 0)
+    index--;
+  lua_gettable(L, index);
+}
 
-  if (lua_isnumber(L, 2)) {
-      // TODO: when set align, erase mask table!
-    lbuf->alignment = (uint8_t) lua_tointeger(L, 2);
+static bool load_mask_field_table(lua_State *L, mask_t * mask)
+{
+  size_t table_len = lua_objlen(L, -1);
+
+  // TODO: [lneto] handle __signed and __endian fields!
+  // TODO: put these two structures on functions or macros!
+  if (table_len >= 1) {
+    lua_getnfield(L, -1, 1);
+    if (!lua_isnumber(L, -1)) 
+      return false;
+    mask->offset = lua_tointeger(L, -1); 
     lua_pop(L, 1);
-    return 1;
   }
-  else if (!lua_istable(L, 2)) {
-    lua_pushnil(L);
-    return 1;
+  if (table_len >= 2) {
+    lua_getnfield(L, -1, 2);
+    if (!lua_isnumber(L, -1)) 
+      return false;
+    mask->length = lua_tointeger(L, -1); 
+    lua_pop(L, 1);
   }
 
+  lua_getfield(L, -1, "__offset");
+  if (lua_isnumber(L, -1))
+    mask->offset = lua_tointeger(L, -1);
+  lua_pop(L, 1);
+
+  lua_getfield(L, -1, "__length");
+  if (lua_isnumber(L, -1))
+    mask->length = lua_tointeger(L, -1);
+  lua_pop(L, 1);
+  return true;
+}
+
+static bool load_mask_field(lua_State *L, mask_t * mask)
+{
+    if (lua_isnumber(L, -1)) { // length
+      mask->length  = lua_tointeger(L, -1); 
+      mask->offset += mask->length;
+    }
+    else if (lua_istable(L, -1)) // { offset, len }
+      if (!load_mask_field_table(L, mask))
+        return false;
+    return true;
+}
+
+static void new_mask_field(lua_State *L, mask_t * mask)
+{
+  //TODO: check if null (is it necessary?)
+  mask_t * new_mask = lua_newuserdata(L, sizeof(mask_t)); 
+  luaL_getmetatable(L, "lbuf.mask");
+  lua_setmetatable(L, -2);
+
+  new_mask->offset = mask->offset;
+  new_mask->length = mask->length;
+}
+
+static void load_masks(lua_State *L, int index)
+{
+  mask_t mask = { .offset = 0, .length = 0 };
   // TODO: create a new clean table to put masks!
-  int t = 2;
-  uint8_t offset = 0;
   /* table is in the stack at index 't' */
   lua_pushnil(L);  /* first key */
-  while (lua_next(L, t) != 0) {
+  while (lua_next(L, index) != 0) {
     /* uses 'key' (at index -2) and 'value' (at index -1) */
-    if (!lua_isnumber(L, -1)) {
-      lua_pop(L, 1);
-      continue;
-    }
+    //if (!load_mask_field(L, lbuf, &mask))
+    if (!load_mask_field(L, &mask))
+      lua_pushnil(L); // mask_table[ix] = nil (remove this item)
 
-    uint8_t length = lua_tonumber(L, -1);
-    if (offset + length > lbuf->size * 8) { 
-      lua_pop(L, 2);
-      break;
-    }
+    lua_pushvalue(L, -2); // push key (to set mask ud to this field)
+    new_mask_field(L, &mask);
 
-    lua_pushvalue(L, -2); // key
-    //TODO: check if null
-    mask_t * mask = lua_newuserdata(L, sizeof(mask_t)); 
-    luaL_getmetatable(L, "lbuf.mask");
-    lua_setmetatable(L, -2);
-
-    mask->offset = offset;
-    // TODO: also handle tables
-    mask->length = length;
-    offset       = mask->offset + mask->length;
-
-    lua_settable(L, 2); // mask_table[ k ] = mask
-
+    lua_settable(L, index); // mask_table[ key ] = mask
     /* removes 'value'; keeps 'key' for next iteration */
     lua_pop(L, 1);
   }
+  // TODO: this code is provisory; we need to make a new userdata!
+  lua_pushboolean(L, true);
+  lua_setfield(L, index, "__mask_table");
+}
+
+static int lnew_mask(lua_State *L)
+{
+  if (!lua_istable(L, 1)) 
+    return 0;
+  load_masks(L, 1);
+  return 1;
+}
+
+static int lapply_mask(lua_State *L)
+{
+  lbuf_t * lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
+
+  if (!lua_istable(L, 2))
+    return 0;
+
+  // TODO: we need to create a new userdata (masktable)
+  lua_getfield(L, 2, "__mask_table");
+  bool is_mask_table = (bool) lua_toboolean(L, -1);
+  lua_pop(L, 1);
+
+  if (!is_mask_table) 
+    load_masks(L, 2);
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "__masks");
@@ -153,6 +213,7 @@ static int lbuf_gc(lua_State *L)
   return 0;
 }
 
+// TODO: separate Lua functions API in diff C functions
 static int lbuf_get(lua_State *L)
 {
   lbuf_t * lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
@@ -250,13 +311,13 @@ static int lbuf_rawget(lua_State *L)
 
 static const luaL_Reg lbuf[ ] = {
   {"new", lbuf_new_},
-  {"mask", lbuf_mask},
+  {"mask", lnew_mask},
   {"rawget", lbuf_rawget},
   {NULL, NULL}
 };
 
 static const luaL_Reg lbuf_m[ ] = {
-  {"mask", lbuf_mask},
+  {"mask", lapply_mask},
   {"rawget", lbuf_rawget},
   {"__index", lbuf_get},
   {"__newindex", lbuf_set},
