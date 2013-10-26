@@ -84,7 +84,7 @@ static int lbuf_new_(lua_State *L)
   return 1;
 }
 
-void luaN_getnfield(lua_State *L, int index, lua_Number number)
+void lua_getnfield(lua_State *L, int index, lua_Number number)
 {
   lua_pushnumber(L, number);
   if (index < 0)
@@ -99,14 +99,14 @@ static bool load_mask_field_table(lua_State *L, mask_t * mask)
   // TODO: [lneto] handle __signed and __endian fields!
   // TODO: put these two structures on functions or macros!
   if (table_len >= 1) {
-    luaN_getnfield(L, -1, 1);
+    lua_getnfield(L, -1, 1);
     if (!lua_isnumber(L, -1)) 
       return false;
     mask->offset = lua_tointeger(L, -1); 
     lua_pop(L, 1);
   }
   if (table_len >= 2) {
-    luaN_getnfield(L, -1, 2);
+    lua_getnfield(L, -1, 2);
     if (!lua_isnumber(L, -1)) 
       return false;
     mask->length = lua_tointeger(L, -1); 
@@ -135,11 +135,6 @@ static bool load_mask_field(lua_State *L, mask_t * mask)
     else if (lua_istable(L, -1)) // { offset, len }
       if (!load_mask_field_table(L, mask))
         return false;
-#if 0
-// TODO: retirar essa verificacao daqui,.
-    if (mask->offset + mask->length > lbuf->size * 8)
-      return false;
-#endif
     return true;
 }
 
@@ -154,10 +149,10 @@ static void new_mask_field(lua_State *L, mask_t * mask)
   new_mask->length = mask->length;
 }
 
-//static void load_masks(lua_State *L, int index, lbuf_t * lbuf)
 static void load_masks(lua_State *L, int index)
 {
   mask_t mask = { .offset = 0, .length = 0 };
+  // TODO: create a new clean table to put masks!
   /* table is in the stack at index 't' */
   lua_pushnil(L);  /* first key */
   while (lua_next(L, index) != 0) {
@@ -178,58 +173,34 @@ static void load_masks(lua_State *L, int index)
   lua_setfield(L, index, "__mask_table");
 }
 
-static int new_mask(lua_State *L)
+static int lnew_mask(lua_State *L)
 {
-  if (lua_istable(L, 1)) {
-    load_masks(L, 1);
-  }
-  else {
-    lua_pop(L, 1);
-    lua_pushnil(L);
-  }
+  if (!lua_istable(L, 1)) 
+    return 0;
+  load_masks(L, 1);
   return 1;
 }
 
-static void mask(lua_State *L, int nargs)
+static int lapply_mask(lua_State *L)
 {
   lbuf_t * lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
 
   if (!lua_istable(L, 2))
-    return;
+    return 0;
 
   // TODO: we need to create a new userdata (masktable)
   lua_getfield(L, 2, "__mask_table");
   bool is_mask_table = (bool) lua_toboolean(L, -1);
   lua_pop(L, 1);
 
-  if (!is_mask_table) {
-    lua_pushcfunction(L, new_mask);
-    lua_pushvalue(L, 2);
-    lua_call(L, nargs - 1, 1);
-  }
+  if (!is_mask_table) 
+    load_masks(L, 2);
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "__masks");
   lua_pushvalue(L, 1);
   lua_pushvalue(L, 2);
   lua_settable(L, -3); 
-}
-
-// TODO: here! ajustar os diferentes cenarios..
-//       - verificar numero de argumentos passados! (tornar seguro)
-//       - fechar essa funcao
-static int lbuf_mask(lua_State *L)
-{
-  int nargs = lua_gettop(L);
-  if (nargs < 1) {
-    lua_pushnil(L);
-    return 1;
-  }
-  
-  if (!lua_isuserdata(L, 1))
-    return new_mask(L);
-
-  mask(L, nargs); // method
 
   // TODO: define what we should return
   lua_pushvalue(L, 1);
@@ -341,13 +312,13 @@ static int lbuf_rawget(lua_State *L)
 
 static const luaL_Reg lbuf[ ] = {
   {"new", lbuf_new_},
-  {"mask", lbuf_mask},
+  {"mask", lnew_mask},
   {"rawget", lbuf_rawget},
   {NULL, NULL}
 };
 
 static const luaL_Reg lbuf_m[ ] = {
-  {"mask", lbuf_mask},
+  {"mask", lapply_mask},
   {"rawget", lbuf_rawget},
   {"__index", lbuf_get},
   {"__newindex", lbuf_set},
