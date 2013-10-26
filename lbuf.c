@@ -125,7 +125,8 @@ static bool load_mask_field_table(lua_State *L, mask_t * mask)
   return true;
 }
 
-static bool load_mask_field(lua_State *L, lbuf_t * lbuf, mask_t * mask)
+//static bool load_mask_field(lua_State *L, lbuf_t * lbuf, mask_t * mask)
+static bool load_mask_field(lua_State *L, mask_t * mask)
 {
     if (lua_isnumber(L, -1)) { // length
       mask->length  = lua_tointeger(L, -1); 
@@ -134,10 +135,11 @@ static bool load_mask_field(lua_State *L, lbuf_t * lbuf, mask_t * mask)
     else if (lua_istable(L, -1)) // { offset, len }
       if (!load_mask_field_table(L, mask))
         return false;
+#if 0
 // TODO: retirar essa verificacao daqui,.
     if (mask->offset + mask->length > lbuf->size * 8)
       return false;
-
+#endif
     return true;
 }
 
@@ -152,14 +154,16 @@ static void new_mask_field(lua_State *L, mask_t * mask)
   new_mask->length = mask->length;
 }
 
-static void load_masks(lua_State *L, int index, lbuf_t * lbuf)
+//static void load_masks(lua_State *L, int index, lbuf_t * lbuf)
+static void load_masks(lua_State *L, int index)
 {
   mask_t mask = { .offset = 0, .length = 0 };
   /* table is in the stack at index 't' */
   lua_pushnil(L);  /* first key */
   while (lua_next(L, index) != 0) {
     /* uses 'key' (at index -2) and 'value' (at index -1) */
-    if (!load_mask_field(L, lbuf, &mask))
+    //if (!load_mask_field(L, lbuf, &mask))
+    if (!load_mask_field(L, &mask))
       lua_pushnil(L); // mask_table[ix] = nil (remove this item)
 
     lua_pushvalue(L, -2); // push key (to set mask ud to this field)
@@ -169,22 +173,20 @@ static void load_masks(lua_State *L, int index, lbuf_t * lbuf)
     /* removes 'value'; keeps 'key' for next iteration */
     lua_pop(L, 1);
   }
+  // TODO: this code is provisory; we need to make a new userdata!
+  lua_pushboolean(L, true);
+  lua_setfield(L, index, "__mask_table");
 }
 
-// desacoplar lbuf do load_masks.. (verificacao deve ser na aplicacao da
-// mascara)
 static int new_mask(lua_State *L)
 {
-  if (lua_isnumber(L, 1)) {
-    // TODO: when set align, erase mask table!
-    // criar uma mascara contendo o alinhamento
-    lbuf->alignment = (uint8_t) lua_tointeger(L, 2);
+  if (lua_istable(L, 1)) {
+    load_masks(L, 1);
   }
-  else if (lua_istable(L, 1)) {
-    load_masks(L, 1, lbuf);
+  else {
+    lua_pop(L, 1);
+    lua_pushnil(L);
   }
-  lua_pop(L, 1);
-  lua_pushnil(L);
   return 1;
 }
 
@@ -192,8 +194,19 @@ static void mask(lua_State *L, int nargs)
 {
   lbuf_t * lbuf = (lbuf_t *) luaL_checkudata(L, 1, "lbuf");
 
-  lua_pushcfunction(L, new_mask);
-  lua_call(L, nargs - 1, 1);
+  if (!lua_istable(L, 2))
+    return;
+
+  // TODO: we need to create a new userdata (masktable)
+  lua_getfield(L, 2, "__mask_table");
+  bool is_mask_table = (bool) lua_toboolean(L, -1);
+  lua_pop(L, 1);
+
+  if (!is_mask_table) {
+    lua_pushcfunction(L, new_mask);
+    lua_pushvalue(L, 2);
+    lua_call(L, nargs - 1, 1);
+  }
 
   lua_getmetatable(L, 1);
   lua_getfield(L, -1, "__masks");
@@ -213,10 +226,10 @@ static int lbuf_mask(lua_State *L)
     return 1;
   }
   
-  if (!lua_isuserdata(L, 1)) // method
+  if (!lua_isuserdata(L, 1))
     return new_mask(L);
 
-  mask(L, nargs);
+  mask(L, nargs); // method
 
   // TODO: define what we should return
   lua_pushvalue(L, 1);
