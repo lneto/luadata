@@ -1,3 +1,3 @@
 #TODO: implement decent makefile!
 all:
-	gcc -o lbuf.so lbuf.c bit_util.c -std=c99 -llua -shared -fPIC
+	gcc -o bitwiser.so bitwiser.c lua_bitwiser.c bit_util.c lua_util.c -std=c99 -llua -shared -fPIC
