@@ -35,7 +35,11 @@
 #include <sys/types.h>
 #endif
 
+#if defined(__linux__)
+#include <bsd/sys/endian.h>
+#else
 #include <sys/endian.h>
+#endif
 
 #include <lua.h>
 
