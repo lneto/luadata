@@ -28,7 +28,11 @@
 #ifndef _BINARY_H_
 #define _BINARY_H_
 
+#if defined(__linux__)
+#include <bsd/sys/endian.h>
+#else
 #include <sys/endian.h>
+#endif
 
 #ifdef _KERNEL
 #include <sys/types.h>

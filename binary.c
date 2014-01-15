@@ -34,6 +34,10 @@
 #define BYTE_MAX	UCHAR_MAX
 #define UINT64_BIT	(64)
 
+#if defined(__linux__) && defined(__GNUC__)
+#define bswap64 __builtin_bswap64
+#endif
+
 inline static void
 set_bits(uint64_t *value, uint64_t clear_mask, uint64_t set_mask)
 {
@@ -89,7 +93,7 @@ swap_bytes_in(uint64_t *value, size_t width)
 	*value = bswap64(*value);
 
 	byte_t truncated = TRUNCATED_BITS(width);
-	if (truncated > 0) 
+	if (truncated > 0)
 		expand(value, width, msb_offset, truncated);
 }
 
@@ -101,7 +105,7 @@ swap_bytes_out(uint64_t *value, size_t width)
 	*value = bswap64(*value);
 
 	byte_t truncated = TRUNCATED_BITS(width);
-	if (truncated > 0) 
+	if (truncated > 0)
 		contract(value, width, msb_offset, truncated);
 
 	*value >>= msb_offset;
@@ -136,7 +140,7 @@ binary_get_uint64(byte_t *bytes, size_t offset, size_t width, int endian)
 
 	uint64_t value = (byte_t) (bytes[ pos ] & mask) >> lsb_offset;
 
-	for (; overflow > 0 && overflow >= BYTE_BIT; overflow -= BYTE_BIT) 
+	for (; overflow > 0 && overflow >= BYTE_BIT; overflow -= BYTE_BIT)
 		value = (value << BYTE_BIT) | bytes[ ++pos ];
 
 	if (overflow > 0) {
@@ -168,7 +172,7 @@ binary_set_uint64(byte_t *bytes, size_t offset, size_t width, int endian, uint64
 	bytes[ pos ] &= clear_mask;
 	bytes[ pos ] |= (uint64_t) value << lsb_offset >> overflow;
 
-	for (; overflow > 0 && overflow >= BYTE_BIT; overflow -= BYTE_BIT) 
+	for (; overflow > 0 && overflow >= BYTE_BIT; overflow -= BYTE_BIT)
 		bytes[ ++pos ] = (uint64_t) value >> (overflow - BYTE_BIT);
 
 	if (overflow > 0) {

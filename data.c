@@ -41,7 +41,7 @@ inline static bool
 check_limits(data_t *data, layout_entry_t *entry)
 {
 	return entry->length <= LUA_INTEGER_BIT &&
-		entry->offset + entry->length < data->length; 
+		entry->offset + entry->length < data->length;
 }
 
 inline static bool
@@ -121,4 +121,3 @@ data_set_field(lua_State *L, data_t *data, int key_ix, lua_Integer value)
 	binary_set_uint64(BINARY_PARMS(data, entry), value);
 	return 0;
 }
-

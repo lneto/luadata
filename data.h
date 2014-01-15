@@ -55,9 +55,9 @@ data_t * data_new(lua_State *, void *, size_t, bool);
 data_t * data_check(lua_State *, int);
 
 void data_apply_layout(lua_State *, data_t *, int);
-                                   
+
 int data_get_field(lua_State *, data_t *, int);
-                                    
+
 int data_set_field(lua_State *, data_t *, int, lua_Integer);
 
 #endif /* _DATA_H_ */
