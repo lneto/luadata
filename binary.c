@@ -34,6 +34,10 @@
 #define BYTE_MAX	UCHAR_MAX
 #define UINT64_BIT	(64)
 
+#if defined(__linux__) && defined(__GNUC__)
+#define bswap64 __builtin_bswap64
+#endif
+
 inline static void
 set_bits(uint64_t *value, uint64_t clear_mask, uint64_t set_mask)
 {
