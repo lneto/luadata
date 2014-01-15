@@ -48,7 +48,7 @@ new_data(lua_State *L)
 	lua_pushnil(L);  /* first key */
 	while (lua_next(L, 1) != 0 && i < len) {
 		/* uses 'key' (at index -2) and 'value' (at index -1) */
-		data[ i++ ] = (char) lua_tointeger(L, -1); 
+		data[ i++ ] = (char) lua_tointeger(L, -1);
 		/* removes 'value'; keeps 'key' for next iteration */
 		lua_pop(L, 1);
 	}
@@ -57,10 +57,10 @@ new_data(lua_State *L)
 	return 1;
 }
 
-static int 
+static int
 new_layout(lua_State *L)
 {
-	if (!lua_istable(L, 1)) 
+	if (!lua_istable(L, 1))
 		return 0;
 
 	layout_load(L, 1);
@@ -79,13 +79,13 @@ apply_layout(lua_State *L)
 	bool is_layout = (bool) lua_toboolean(L, -1);
 	lua_pop(L, 1);
 
-	if (!is_layout) 
+	if (!is_layout)
 		layout_load(L, 2);
 
 	data_apply_layout(L, data, 2);
-	
+
 	/* return data object */
-	lua_pushvalue(L, 1); 
+	lua_pushvalue(L, 1);
 	return 1;
 }
 
@@ -110,7 +110,7 @@ get_field(lua_State *L)
 		luau_gettable(L, -1, 2);
 		if (lua_iscfunction(L, -1))
 			/* return this method */
-			return 1; 
+			return 1;
 		lua_pop(L, 1);
 	}
 
@@ -128,8 +128,8 @@ set_field(lua_State *L)
 		luau_gettable(L, -1, 2);
 		if (lua_iscfunction(L, -1)) {
 			/* shouldn't overwrite a method */
-			lua_pop(L, 1); 
-			return 0; 
+			lua_pop(L, 1);
+			return 0;
 		}
 	}
 
@@ -173,7 +173,7 @@ luaopen_data(lua_State *L)
 }
 
 int
-ldata_newref(lua_State *L, void *ptr, size_t size) 
+ldata_newref(lua_State *L, void *ptr, size_t size)
 {
 	data_new(L, ptr, size, false);
 	return luau_ref(L);
@@ -217,4 +217,3 @@ luadata_modcmd(modcmd_t cmd, void *opaque)
 	return error;
 }
 #endif
-
