@@ -46,7 +46,7 @@ lua_Integer
 luau_getarray_integer(lua_State *L, int index, lua_Integer n)
 {
 	luau_getarray(L, index, n);
-	lua_Integer result = lua_tointeger(L, -1); 
+	lua_Integer result = lua_tointeger(L, -1);
 	lua_pop(L, 1);
 	return result;
 }
@@ -54,19 +54,19 @@ luau_getarray_integer(lua_State *L, int index, lua_Integer n)
 void
 luau_gettable(lua_State *L, int index, int field_index)
 {
-	lua_pushvalue(L, field_index); 
+	lua_pushvalue(L, field_index);
 	adjust_index(&index, 1);
-	lua_gettable(L, index); 
+	lua_gettable(L, index);
 }
 
 void
 luau_settable(lua_State *L, int index, int field_index, int value_index)
 {
-	lua_pushvalue(L, field_index); 
+	lua_pushvalue(L, field_index);
 	adjust_index(&value_index, 1);
-	lua_pushvalue(L, value_index); 
+	lua_pushvalue(L, value_index);
 	adjust_index(&index, 2);
-	lua_settable(L, index); 
+	lua_settable(L, index);
 }
 
 void *

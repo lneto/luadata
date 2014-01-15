@@ -35,7 +35,7 @@
 
 #include <lua.h>
 
-extern int ldata_newref(lua_State *, void *, size_t); 
+extern int ldata_newref(lua_State *, void *, size_t);
 
 extern void ldata_unref(lua_State *, int);
 
