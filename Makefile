@@ -1,3 +1,9 @@
-#TODO: implement decent makefile!
-all:
-	gcc -o bitwiser.so bitwiser.c lua_bitwiser.c bit_util.c lua_util.c -std=c99 -llua -shared -fPIC
+LUA_MODULES=	data
+
+LUA_SRCS.data=	luadata.c
+LUA_SRCS.data+=	data.c
+LUA_SRCS.data+=	layout.c
+LUA_SRCS.data+=	luautil.c
+LUA_SRCS.data+=	binary.c
+
+.include <bsd.lua.mk>
