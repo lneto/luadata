@@ -71,6 +71,7 @@ load_entry_numbered(lua_State *L, layout_entry_t *entry)
 	if (array_len >= 3) {
 		luau_getarray(L, -1, 3);
 		load_endian(L, entry);
+		lua_pop(L, 1);
 	}
 }
 
