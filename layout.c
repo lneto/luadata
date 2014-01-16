@@ -52,7 +52,7 @@ load_endian(lua_State *L, layout_entry_t *entry)
 
 	if (endian[0] == 'n' || endian[0] == 'b')
 		entry->endian = BIG_ENDIAN;
-	else if (endian[0] == 'l') 
+	else if (endian[0] == 'l')
 		entry->endian = LITTLE_ENDIAN;
 	else if (endian[0] == 'h')
 		entry->endian = BYTE_ORDER;
@@ -64,11 +64,11 @@ load_entry_numbered(lua_State *L, layout_entry_t *entry)
 {
 	size_t array_len = lua_objlen(L, -1);
 
-	if (array_len >= 1) 
-		entry->offset = luau_getarray_integer(L, -1, 1); 
-	if (array_len >= 2) 
-		entry->length = luau_getarray_integer(L, -1, 2); 
-	if (array_len >= 3) { 
+	if (array_len >= 1)
+		entry->offset = luau_getarray_integer(L, -1, 1);
+	if (array_len >= 2)
+		entry->length = luau_getarray_integer(L, -1, 2);
+	if (array_len >= 3) {
 		luau_getarray(L, -1, 3);
 		load_endian(L, entry);
 	}
@@ -89,7 +89,7 @@ load_entry_named(lua_State *L, layout_entry_t *entry)
 	lua_pop(L, 1);
 
 	lua_getfield(L, -1, "endian");
-	if (lua_isstring(L, -1)) 
+	if (lua_isstring(L, -1))
 		load_endian(L, entry);
 	lua_pop(L, 1);
 }
@@ -102,7 +102,7 @@ load_entry(lua_State *L, layout_entry_t *entry)
 	load_entry_named(L, entry);
 }
 
-static int 
+static int
 new_entry(lua_State *L, layout_entry_t *entry)
 {
 	layout_entry_t *nentry =
@@ -115,7 +115,7 @@ new_entry(lua_State *L, layout_entry_t *entry)
 	return 1;
 }
 
-void 
+void
 layout_load(lua_State *L, int index)
 {
 	layout_entry_t entry;
@@ -130,7 +130,7 @@ layout_load(lua_State *L, int index)
 			new_entry(L, &entry);
 
 		/* layout[ key ] = entry */
-		luau_settable(L, index, -3, -1); 
+		luau_settable(L, index, -3, -1);
 
 		/* removes 'value' and 'entry'; keeps 'key' for next iteration */
 		lua_pop(L, 2);
@@ -164,4 +164,3 @@ layout_copy_entry(layout_entry_t *dst, layout_entry_t *src)
 	dst->length = src->length;
 	dst->endian = src->endian;
 }
-
