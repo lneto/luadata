@@ -41,7 +41,7 @@ inline static bool
 check_limits(data_t *data, layout_entry_t *entry)
 {
 	return entry->length <= LUA_INTEGER_BIT &&
-		entry->offset + entry->length < data->length; 
+		entry->offset + entry->length <= data->length; 
 }
 
 inline static bool
