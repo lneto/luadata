@@ -135,7 +135,8 @@ set_field(lua_State *L)
 
 	lua_Integer value = lua_tointeger(L, 3);
 
-	return data_set_field(L, data, 2, value);
+	data_set_field(L, data, 2, value);
+	return 0;
 }
 
 static const luaL_Reg data_lib[ ] = {

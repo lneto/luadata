@@ -108,16 +108,15 @@ data_get_field(lua_State *L, data_t *data, int key_ix)
 	return 1;
 }
 
-int
+void
 data_set_field(lua_State *L, data_t *data, int key_ix, lua_Integer value)
 {
 	if (data->ptr == NULL)
-		return 0;
+		return;
 
 	layout_entry_t *entry = get_entry(L, data, key_ix);
 	if (!check_entry(data, entry))
-		return 0;
+		return;
 
 	binary_set_uint64(BINARY_PARMS(data, entry), value);
-	return 0;
 }
