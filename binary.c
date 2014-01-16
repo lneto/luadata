@@ -136,7 +136,7 @@ binary_get_uint64(byte_t *bytes, size_t offset, size_t width, int endian)
 
 	uint64_t value = (byte_t) (bytes[ pos ] & mask) >> lsb_offset;
 
-	for (; overflow > 0 && overflow >= BYTE_BIT; overflow -= BYTE_BIT) 
+	for (; overflow >= BYTE_BIT; overflow -= BYTE_BIT) 
 		value = (value << BYTE_BIT) | bytes[ ++pos ];
 
 	if (overflow > 0) {
@@ -168,7 +168,7 @@ binary_set_uint64(byte_t *bytes, size_t offset, size_t width, int endian, uint64
 	bytes[ pos ] &= clear_mask;
 	bytes[ pos ] |= (uint64_t) value << lsb_offset >> overflow;
 
-	for (; overflow > 0 && overflow >= BYTE_BIT; overflow -= BYTE_BIT) 
+	for (; overflow >= BYTE_BIT; overflow -= BYTE_BIT) 
 		bytes[ ++pos ] = (uint64_t) value >> (overflow - BYTE_BIT);
 
 	if (overflow > 0) {
