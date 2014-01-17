@@ -3,7 +3,7 @@ luadata
 
 Luadata provides C and Lua APIs to handle binary data using Lua scripts. Here is a briefly description of those:
 
-## Lua API:
+## Lua API
 
 ### creation
 
