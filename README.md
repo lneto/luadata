@@ -28,7 +28,8 @@ Where, field is the name of the field, \<offset\> is the offset in bits (MSB 0),
 Here are a couple examples:
 
 * format 1:
-```
+
+```Lua
 l1 = data.layout{
   msb      = {0,  1},
   uint32   = {0, 32},
@@ -36,7 +37,9 @@ l1 = data.layout{
 }
 
 ```
-* format 2: 
+
+* format 2:
+
 ```Lua
 l2 = data.layout{
   msb                  = {offset = 0, length = 1},
