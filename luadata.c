@@ -177,6 +177,8 @@ int
 ldata_newref(lua_State *L, void *ptr, size_t size)
 {
 	data_new(L, ptr, size, false);
+	/* keep the new data object on the stack */
+	lua_pushvalue(L, -1);
 	return luau_ref(L);
 }
 
