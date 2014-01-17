@@ -21,7 +21,7 @@ d1 = data.new{0xFF, 0xFE, 0x00} --> returns a data object with 3 bytes.
 Returns a new layout table based on table argument, which should have the following formats for its fields:
 
 1. field = {\<offset\>, \<length\> \[, \<endian\>\]} or
-2. field = {offset = \<offset\>, length = \<length\> \[endian = \<endian\>\]}
+2. field = {offset = \<offset\>, length = \<length\> \[, endian = \<endian\>\]}
 
 Where, field is the name of the field, \<offset\> is the offset in bits (MSB 0), \<length\> is the length in bits, endian is a string that indicates the field endianness ('host', 'net', 'little', 'big'). The default value for endian is 'big'.
 
