@@ -35,7 +35,6 @@ l1 = data.layout{
   uint64le = {0, 64, 'little'}
 }
 ```
-
 * format 2: 
 ```Lua
 l2 = data.layout{
