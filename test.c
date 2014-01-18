@@ -8,7 +8,8 @@
 
 typedef unsigned char byte_t;
 
-int main(void)
+int
+main(void)
 {
 	/* create a new Lua state */
 	lua_State *L = luaL_newstate();
