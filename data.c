@@ -75,6 +75,16 @@ data_new(lua_State *L, void *ptr, size_t size, bool free)
 	return data;
 }
 
+void
+data_delete(lua_State *L, data_t *data)
+{
+	if (data->free)
+		luau_free(L, data->ptr, data->size);
+
+	if (luau_isvalidref(data->layout))
+		luau_unref(L, data->layout);
+}
+
 inline data_t *
 data_check(lua_State *L, int index)
 {

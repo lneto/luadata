@@ -52,6 +52,8 @@ typedef struct {
 
 data_t * data_new(lua_State *, void *, size_t, bool);
 
+void data_delete(lua_State *, data_t *);
+
 data_t * data_check(lua_State *, int);
 
 void data_apply_layout(lua_State *, data_t *, int);

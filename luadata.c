@@ -93,13 +93,7 @@ static int
 gc(lua_State *L)
 {
 	data_t *data = data_check(L, 1);
-
-	if (data->free)
-		luau_free(L, data->ptr, data->size);
-
-	if (luau_isvalidref(data->layout))
-		luau_unref(L, data->layout);
-
+	data_delete(L, data);
 	return 0;
 }
 
