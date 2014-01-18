@@ -9,4 +9,4 @@ data.so: $(OBJ)
 test: test.c data.so
 
 clean:
-	rm *.so *.o
+	rm -f *.so *.o test || true
