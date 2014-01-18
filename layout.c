@@ -103,6 +103,14 @@ load_entry(lua_State *L, layout_entry_t *entry)
 	load_entry_named(L, entry);
 }
 
+static void
+copy_entry(layout_entry_t *dst, layout_entry_t *src)
+{
+	dst->offset = src->offset;
+	dst->length = src->length;
+	dst->endian = src->endian;
+}
+
 static int
 new_entry(lua_State *L, layout_entry_t *entry)
 {
@@ -112,7 +120,7 @@ new_entry(lua_State *L, layout_entry_t *entry)
 	luaL_getmetatable(L, LAYOUT_ENTRY_USERDATA);
 	lua_setmetatable(L, -2);
 
-	layout_copy_entry(nentry, entry);
+	copy_entry(nentry, entry);
 	return 1;
 }
 
@@ -158,10 +166,3 @@ end:
 	return entry;
 }
 
-void
-layout_copy_entry(layout_entry_t *dst, layout_entry_t *src)
-{
-	dst->offset = src->offset;
-	dst->length = src->length;
-	dst->endian = src->endian;
-}

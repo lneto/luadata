@@ -55,6 +55,4 @@ void layout_load(lua_State *, int);
 
 layout_entry_t * layout_get_entry(lua_State *, int, int);
 
-void layout_copy_entry(layout_entry_t *, layout_entry_t *);
-
 #endif /* _LAYOUT_H_ */
