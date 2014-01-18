@@ -158,9 +158,6 @@ static const luaL_Reg layout_entry_m[ ] = {
 };
 
 int
-luaopen_data(lua_State *L);
-
-int
 luaopen_data(lua_State *L)
 {
 	luaL_newmetatable(L, DATA_USERDATA);
