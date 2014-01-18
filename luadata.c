@@ -96,6 +96,10 @@ gc(lua_State *L)
 
 	if (data->free)
 		luau_free(L, data->ptr, data->size);
+
+	if (luau_isvalidref(data->layout))
+		luau_unref(L, data->layout);
+
 	return 0;
 }
 
