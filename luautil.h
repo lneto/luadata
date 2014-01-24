@@ -49,6 +49,8 @@ void luau_gettable(lua_State *, int, int);
 
 void luau_settable(lua_State *, int, int, int);
 
+void luau_getmetatable(lua_State *, int, int);
+
 void * luau_malloc(lua_State *, size_t);
 
 void luau_free(lua_State *, void *, size_t);

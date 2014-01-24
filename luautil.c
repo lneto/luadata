@@ -69,6 +69,16 @@ luau_settable(lua_State *L, int index, int field_index, int value_index)
 	lua_settable(L, index);
 }
 
+void
+luau_getmetatable(lua_State *L, int index, int field_index)
+{
+	lua_getmetatable(L, index);
+	adjust_index(&field_index, 1);
+	luau_gettable(L, -1, field_index);
+	/* pop metatable */
+	lua_remove(L, -2);
+}
+
 void *
 luau_malloc(lua_State *L, size_t size)
 {

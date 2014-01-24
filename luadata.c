@@ -102,16 +102,13 @@ get_field(lua_State *L)
 {
 	data_t *data = data_check(L, 1);
 
-	lua_getmetatable(L, 1);
-	if (lua_isstring(L, 2)) {
-		/* try object-oriented access first */
-		luau_gettable(L, -1, 2);
-		if (lua_iscfunction(L, -1))
-			/* return this method */
-			return 1;
-		lua_pop(L, 1);
-	}
+	/* try object-oriented access first */
+	luau_getmetatable(L, 1, 2);
+	if (!lua_isnil(L, -1))
+		/* return this method */
+		return 1;
 
+	lua_pop(L, 1);
 	return data_get_field(L, data, 2);
 }
 
@@ -120,20 +117,17 @@ set_field(lua_State *L)
 {
 	data_t *data = data_check(L, 1);
 
-	lua_getmetatable(L, 1);
-	if (lua_isstring(L, 2)) {
-		/* try object-oriented access first */
-		luau_gettable(L, -1, 2);
-		if (lua_iscfunction(L, -1)) {
-			/* shouldn't overwrite a method */
-			lua_pop(L, 1);
-			return 0;
-		}
-	}
+	/* try object-oriented access first */
+	luau_getmetatable(L, 1, 2);
+	if (!lua_isnil(L, -1))
+		/* shouldn't overwrite a method */
+		goto end;
 
 	lua_Integer value = lua_tointeger(L, 3);
 
 	data_set_field(L, data, 2, value);
+end:
+	lua_pop(L, 1);
 	return 0;
 }
 
