@@ -45,12 +45,20 @@
 typedef struct {
 	void  *ptr;
 	size_t size;
-	size_t length;
-	int    layout;
+	size_t refcount;
 	bool   free;
+} data_raw_t;
+
+typedef struct {
+	data_raw_t *raw;
+	size_t      offset;
+	size_t      length;
+	int         layout;
 } data_t;
 
 data_t * data_new(lua_State *, void *, size_t, bool);
+
+int data_new_segment(lua_State *, data_t *, size_t, size_t);
 
 void data_delete(lua_State *, data_t *);
 

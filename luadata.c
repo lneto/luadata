@@ -68,6 +68,29 @@ new_layout(lua_State *L)
 }
 
 static int
+new_segment(lua_State *L)
+{
+	data_t *data = data_check(L, 1);
+
+	size_t offset = data->offset;
+	size_t length = data->length;
+
+	int nargs = lua_gettop(L);
+	if (nargs >= 2) {
+		size_t seg_offset = luau_tosize(L, 2);
+
+		offset += seg_offset;
+
+		if (nargs >= 3)
+			length = luau_tosize(L, 3);
+		else
+			length -= seg_offset;
+	}
+
+	return data_new_segment(L, data, offset, length);
+}
+
+static int
 apply_layout(lua_State *L)
 {
 	data_t *data = data_check(L, 1);
@@ -132,13 +155,14 @@ end:
 }
 
 static const luaL_Reg data_lib[ ] = {
-	{"new"  , new_data},
+	{"new"   , new_data},
 	{"layout", new_layout},
 	{NULL    , NULL}
 };
 
 static const luaL_Reg data_m[ ] = {
 	{"layout"    , apply_layout},
+	{"segment"   , new_segment},
 	{"__index"   , get_field},
 	{"__newindex", set_field},
 	{"__gc"      , gc},
@@ -177,7 +201,7 @@ ldata_unref(lua_State *L, int r)
 	luau_getref(L, r);
 	data_t *data = data_check(L, -1);
 
-	data->ptr = NULL;
+	data->raw->ptr = NULL;
 
 	lua_pop(L, 1);
 	luau_unref(L, r);

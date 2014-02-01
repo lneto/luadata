@@ -41,6 +41,8 @@
 #define luau_unref(L, r)	luaL_unref(L, LUA_REGISTRYINDEX, r)
 #define luau_getref(L, r)	lua_rawgeti(L, LUA_REGISTRYINDEX, r)
 
+#define luau_tosize(L, index)	((size_t) lua_tointeger(L, index))
+
 void luau_getarray(lua_State *, int, lua_Integer);
 
 lua_Integer luau_getarray_integer(lua_State *, int, lua_Integer);

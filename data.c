@@ -38,16 +38,25 @@
 #define LUA_INTEGER_BIT		(LUA_INTEGER_BYTE * BYTE_BIT)
 
 inline static bool
-check_limits(data_t *data, layout_entry_t *entry)
+check_limits(data_t *data, size_t offset, size_t length)
 {
-	return entry->length <= LUA_INTEGER_BIT &&
-		entry->offset + entry->length <= data->length;
+	return length > LUA_INTEGER_BIT ||
+		offset + length > data->offset + data->length ||
+		offset < data->offset;
+}
+
+#define ENTRY_OFFSET(data, entry)	(data->offset + entry->offset)
+
+inline static bool
+check_entry_limits(data_t *data, layout_entry_t *entry)
+{
+	return check_limits(data, ENTRY_OFFSET(data, entry), entry->length);
 }
 
 inline static bool
 check_entry(data_t *data, layout_entry_t *entry)
 {
-	return entry != NULL && check_limits(data, entry);
+	return entry == NULL || check_entry_limits(data, entry);
 }
 
 inline static layout_entry_t *
@@ -59,27 +68,73 @@ get_entry(lua_State *L, data_t *data, int key_ix)
 	return layout_get_entry(L, data->layout, key_ix);
 }
 
-data_t *
-data_new(lua_State *L, void *ptr, size_t size, bool free)
+inline static check_raw_ptr(data_t *data)
+{
+	return data->raw->ptr == NULL;
+}
+
+static data_raw_t *
+new_raw(lua_State *L, void *ptr, size_t size, bool free)
+{
+	data_raw_t *raw = (data_raw_t *) luau_malloc(L, sizeof(data_raw_t));
+
+	raw->ptr      = ptr;
+	raw->size     = size;
+	raw->refcount = 0;
+	raw->free     = free;
+	return raw;
+}
+
+static data_t *
+new_data(lua_State *L, data_raw_t *raw, size_t offset, size_t length)
 {
 	data_t *data = lua_newuserdata(L, sizeof(data_t));
 
-	data->ptr    = ptr;
-	data->size   = size;
-	data->length = size * BYTE_BIT;
+	data->raw    = raw;
+	data->offset = offset;
+	data->length = length;
 	data->layout = LUA_REFNIL;
-	data->free   = free;
 
 	luaL_getmetatable(L, DATA_USERDATA);
 	lua_setmetatable(L, -2);
+
 	return data;
+}
+
+inline data_t *
+data_new(lua_State *L, void *ptr, size_t size, bool free)
+{
+	data_raw_t *raw  = new_raw(L, ptr, size, free);
+	data_t     *data = new_data(L, raw, 0, size * BYTE_BIT);
+
+	return data;
+}
+
+inline int
+data_new_segment(lua_State *L, data_t *data, size_t offset, size_t length)
+{
+	if (check_limits(data, offset, length))
+		return 0;
+
+	data_t *segment = new_data(L, data->raw, offset, length);
+
+	data->raw->refcount++;
+	return 1;
 }
 
 void
 data_delete(lua_State *L, data_t *data)
 {
-	if (data->free)
-		luau_free(L, data->ptr, data->size);
+	data_raw_t *raw = data->raw;
+
+	if (raw->refcount == 0) {
+		if (raw->free)
+			luau_free(L, raw->ptr, raw->size);
+
+		luau_free(L, raw, sizeof(data_raw_t));
+	}
+	else
+		raw->refcount--;
 
 	if (luau_isvalidref(data->layout))
 		luau_unref(L, data->layout);
@@ -99,17 +154,17 @@ data_apply_layout(lua_State *L, data_t *data, int layout_ix)
 	data->layout = luau_ref(L);
 }
 
-#define BINARY_PARMS(data, entry)					\
-	data->ptr, entry->offset, entry->length, entry->endian
+#define BINARY_PARMS(data, entry)						\
+	data->raw->ptr, ENTRY_OFFSET(data, entry), entry->length, entry->endian
 
 int
 data_get_field(lua_State *L, data_t *data, int key_ix)
 {
-	if (data->ptr == NULL)
+	if (check_raw_ptr(data))
 		return 0;
 
 	layout_entry_t *entry = get_entry(L, data, key_ix);
-	if (!check_entry(data, entry))
+	if (check_entry(data, entry))
 		return 0;
 
 	/* assertion: LUA_INTEGER_BIT <= 64 */
@@ -121,11 +176,11 @@ data_get_field(lua_State *L, data_t *data, int key_ix)
 void
 data_set_field(lua_State *L, data_t *data, int key_ix, lua_Integer value)
 {
-	if (data->ptr == NULL)
+	if (check_raw_ptr(data))
 		return;
 
 	layout_entry_t *entry = get_entry(L, data, key_ix);
-	if (!check_entry(data, entry))
+	if (check_entry(data, entry))
 		return;
 
 	binary_set_uint64(BINARY_PARMS(data, entry), value);
