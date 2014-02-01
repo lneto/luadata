@@ -58,7 +58,7 @@ d2:layout{byte = {0, 8}} -- creates and applies a new layout into d2 data object
 
 ### 1.3 segment
 
-### ```d:segment([ offset [, length ])```
+#### ```d:segment([ offset [, length ])```
 
 Returns a new data object pointing for the same raw data (memory region) of a given data object, but limited by offset and length parameters. If length is ommited, it assumes that length is the original length minus the offset. If offset is ommited, it assumes the whole data. For example:
 ```Lua
