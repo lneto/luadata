@@ -68,7 +68,8 @@ get_entry(lua_State *L, data_t *data, int key_ix)
 	return layout_get_entry(L, data->layout, key_ix);
 }
 
-inline static check_raw_ptr(data_t *data)
+inline static bool
+check_raw_ptr(data_t *data)
 {
 	return data->raw->ptr == NULL;
 }
