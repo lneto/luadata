@@ -70,7 +70,7 @@ new_layout(lua_State *L)
 static int
 new_segment(lua_State *L)
 {
-	data_t *data = data_check(L, 1);
+	data_t *data = lua_touserdata(L, 1);
 
 	size_t offset = data->offset;
 	size_t length = data->length;
@@ -93,7 +93,7 @@ new_segment(lua_State *L)
 static int
 apply_layout(lua_State *L)
 {
-	data_t *data = data_check(L, 1);
+	data_t *data = lua_touserdata(L, 1);
 
 	if (!lua_istable(L, 2))
 		return 0;
@@ -115,7 +115,7 @@ apply_layout(lua_State *L)
 static int
 gc(lua_State *L)
 {
-	data_t *data = data_check(L, 1);
+	data_t *data = lua_touserdata(L, 1);
 	data_delete(L, data);
 	return 0;
 }
@@ -123,7 +123,7 @@ gc(lua_State *L)
 static int
 get_field(lua_State *L)
 {
-	data_t *data = data_check(L, 1);
+	data_t *data = lua_touserdata(L, 1);
 
 	/* try object-oriented access first */
 	luau_getmetatable(L, 1, 2);
@@ -138,7 +138,7 @@ get_field(lua_State *L)
 static int
 set_field(lua_State *L)
 {
-	data_t *data = data_check(L, 1);
+	data_t *data = lua_touserdata(L, 1);
 
 	/* try object-oriented access first */
 	luau_getmetatable(L, 1, 2);

@@ -141,12 +141,6 @@ data_delete(lua_State *L, data_t *data)
 		luau_unref(L, data->layout);
 }
 
-inline data_t *
-data_check(lua_State *L, int narg)
-{
-	return (data_t *) luaL_checkudata(L, narg, DATA_USERDATA);
-}
-
 inline void
 data_apply_layout(lua_State *L, data_t *data, int layout_ix)
 {
