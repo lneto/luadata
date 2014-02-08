@@ -30,9 +30,11 @@
 #include "luautil.h"
 
 #include "data.h"
-
 #include "binary.h"
 #include "layout.h"
+
+/* XXX: remove it after updating Lua */
+#include "luacompat502.h"
 
 #define LUA_INTEGER_BYTE	(sizeof(lua_Integer))
 #define LUA_INTEGER_BIT		(LUA_INTEGER_BYTE * BYTE_BIT)
@@ -139,6 +141,12 @@ data_delete(lua_State *L, data_t *data)
 
 	if (luau_isvalidref(data->layout))
 		luau_unref(L, data->layout);
+}
+
+inline data_t *
+data_test(lua_State *L, int index)
+{
+	return (data_t *) luaL_testudata(L, index, DATA_USERDATA);
 }
 
 inline void

@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-I. -fPIC
 LDLIBS=-llua
-OBJ=luadata.o data.o layout.o binary.o luautil.o
+OBJ=luadata.o data.o layout.o binary.o luautil.o luacompat502.o
 
 data.so: $(OBJ)
 	$(CC) -shared -o data.so $(OBJ)

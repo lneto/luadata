@@ -5,6 +5,7 @@ LUA_SRCS.data+=	data.c
 LUA_SRCS.data+=	layout.c
 LUA_SRCS.data+=	luautil.c
 LUA_SRCS.data+=	binary.c
+LUA_SRCS.data+=	luacompat502.c
 
 DATA=		data.so
 LDLIBS= 	-llua  ${DATA}

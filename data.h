@@ -62,6 +62,8 @@ int data_new_segment(lua_State *, data_t *, size_t, size_t);
 
 void data_delete(lua_State *, data_t *);
 
+data_t * data_test(lua_State *, int);
+
 void data_apply_layout(lua_State *, data_t *, int);
 
 int data_get_field(lua_State *, data_t *, int);

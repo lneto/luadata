@@ -28,10 +28,9 @@
 #include <lua.h>
 #include <lauxlib.h>
 
-#include "luadata.h"
-
 #include "luautil.h"
 
+#include "luadata.h"
 #include "data.h"
 #include "layout.h"
 
@@ -200,7 +199,7 @@ ldata_unref(lua_State *L, int r)
 {
 	luau_getref(L, r);
 
-	data_t *data = lua_touserdata(L, -1);
+	data_t *data = data_test(L, -1);
 	if (data == NULL)
 		return;
 
@@ -214,7 +213,7 @@ ldata_unref(lua_State *L, int r)
 void *
 ldata_toptr(lua_State *L, int index, size_t *size)
 {
-	data_t *data = lua_touserdata(L, index);
+	data_t *data = data_test(L, index);
 	if (data == NULL)
 		return NULL;
 

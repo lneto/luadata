@@ -25,16 +25,20 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#include <lua.h>
 #include <lauxlib.h>
 
 #include "luautil.h"
 
 #include "layout.h"
 
+/* XXX: remove it after updating Lua */
+#include "luacompat502.h"
+
 inline static layout_entry_t *
-check_entry(lua_State *L, int index)
+test_entry(lua_State *L, int index)
 {
-	return (layout_entry_t *) luaL_checkudata(L, index, LAYOUT_ENTRY_USERDATA);
+	return (layout_entry_t *) luaL_testudata(L, index, LAYOUT_ENTRY_USERDATA);
 }
 
 inline static void
@@ -159,7 +163,7 @@ layout_get_entry(lua_State *L, int layout_ix, int key_ix)
 	if (lua_isnil(L, -1))
 		goto end;
 
-	entry = check_entry(L, -1);
+	entry = test_entry(L, -1);
 
 end:
 	lua_pop(L, 2);
