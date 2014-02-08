@@ -142,9 +142,9 @@ data_delete(lua_State *L, data_t *data)
 }
 
 inline data_t *
-data_check(lua_State *L, int index)
+data_check(lua_State *L, int narg)
 {
-	return (data_t *) luaL_checkudata(L, index, DATA_USERDATA);
+	return (data_t *) luaL_checkudata(L, narg, DATA_USERDATA);
 }
 
 inline void

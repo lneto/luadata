@@ -35,10 +35,12 @@
 
 #include <lua.h>
 
+extern int luaopen_data(lua_State *);
+
 extern int ldata_newref(lua_State *, void *, size_t);
 
 extern void ldata_unref(lua_State *, int);
 
-extern int luaopen_data(lua_State *L);
+extern void * ldata_toptr(lua_State *, int, size_t *);
 
 #endif /* _LUA_DATA_H_ */

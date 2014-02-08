@@ -199,12 +199,29 @@ void
 ldata_unref(lua_State *L, int r)
 {
 	luau_getref(L, r);
-	data_t *data = data_check(L, -1);
+
+	data_t *data = lua_touserdata(L, -1);
+	if (data == NULL)
+		return;
 
 	data->raw->ptr = NULL;
 
+	/* pop data object */
 	lua_pop(L, 1);
 	luau_unref(L, r);
+}
+
+void *
+ldata_toptr(lua_State *L, int index, size_t *size)
+{
+	data_t *data = lua_touserdata(L, index);
+	if (data == NULL)
+		return NULL;
+
+	if (size != NULL)
+		*size = data->raw->size;
+
+	return data->raw->ptr;
 }
 
 #ifdef _MODULE
