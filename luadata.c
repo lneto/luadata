@@ -214,8 +214,11 @@ void *
 ldata_toptr(lua_State *L, int index, size_t *size)
 {
 	data_t *data = data_test(L, index);
-	if (data == NULL)
+	if (data == NULL) {
+		if (size != NULL)
+			*size = 0;
 		return NULL;
+	}
 
 	if (size != NULL)
 		*size = data->raw->size;
