@@ -18,7 +18,7 @@ main(void)
 	luaopen_data(L);
 
 	/* load a script */
-	if (luaL_dofile(L, "filter.lua") != 0)
+	if (luaL_dofile(L, "ctest.lua") != 0)
 		goto err;
 	
 	/* get the filter function */
@@ -34,7 +34,7 @@ main(void)
 	/* create a new data object */
 	int rd = ldata_newref(L, data_ptr, data_size);
 
-	/* call filter(d)*/
+	/* call data_filter(d)*/
 	if (lua_pcall(L, 1, 1, 0) != 0)
 		goto err;
 
@@ -47,14 +47,14 @@ main(void)
 	/* now we can safely free the data pointer */
 	free(data_ptr);
 
-	/* get the access_global_data function */
-	lua_getglobal(L, "access_global_data");
+	/* get the access_global function */
+	lua_getglobal(L, "access_global");
 
-	/* call access_global_data() */
+	/* call access_global() to try to access a data with a freed ptr */
 	if (lua_pcall(L, 0, 1, 0) != 0)
 		goto err;
 
-	/* if global access returned nil and filter has passed; then test passed */
+	/* if access_global() returned nil and filter() has passed; then test passed */
 	if (lua_isnil(L, -1) && passed)
 		printf("test passed ;-)\n");
 

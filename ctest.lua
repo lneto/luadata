@@ -14,7 +14,7 @@ function filter(d)
 		d.uint4_lsb == 0xf
 end
 
-function access_global_data()
+function access_global()
 	-- should return nil if ldata_unref(d) has been called from C
 	return gd.uint16
 end
