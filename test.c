@@ -1,5 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <stddef.h>
+#include <assert.h>
 
 #include <lua.h>
 #include <lauxlib.h>
@@ -18,8 +20,7 @@ main(void)
 	luaopen_data(L);
 
 	/* load a script */
-	if (luaL_dofile(L, "ctest.lua") != 0)
-		goto err;
+	assert(luaL_dofile(L, "ctest.lua") == 0);
 	
 	/* get the filter function */
 	lua_getglobal(L, "filter");
@@ -35,31 +36,53 @@ main(void)
 	int rd = ldata_newref(L, data_ptr, data_size);
 
 	/* call data_filter(d)*/
-	if (lua_pcall(L, 1, 1, 0) != 0)
-		goto err;
+	assert(lua_pcall(L, 1, 1, 0) == 0);
 
 	/* get filter result */
-	bool passed = (bool) lua_toboolean(L, -1);
+	int passed = lua_toboolean(L, -1);
+	assert(passed);
 
 	/* unregister the Lua data object */
 	ldata_unref(L, rd);
 
 	/* now we can safely free the data pointer */
 	free(data_ptr);
+	data_ptr  = NULL;
+	data_size = 0;
 
 	/* get the access_global function */
 	lua_getglobal(L, "access_global");
 
 	/* call access_global() to try to access a data with a freed ptr */
-	if (lua_pcall(L, 0, 1, 0) != 0)
-		goto err;
+	assert(lua_pcall(L, 0, 1, 0) == 0);
 
-	/* if access_global() returned nil and filter() has passed; then test passed */
-	if (lua_isnil(L, -1) && passed)
-		printf("test passed ;-)\n");
+	/* should return nil */
+	assert(lua_isnil(L, -1));
 
+	/* get a pointer of data object created by the Lua script */
+	lua_getglobal(L, "d");
+	data_ptr = (byte_t *) ldata_toptr(L, -1, &data_size);
+	assert(data_ptr != NULL);
+
+	/* check size and values */
+	assert(data_size == 4);
+	assert(data_ptr[0] == 0xFF);
+	assert(data_ptr[1] == 0xEE);
+	assert(data_ptr[2] == 0xDD);
+	assert(data_ptr[3] == 0x00);
+	lua_pop(L, 1);
+
+	/* remove data object refered by 'd' from Lua */
+	lua_pushnil(L);
+	lua_setglobal(L, "d");
+	lua_gc(L, LUA_GCCOLLECT, 0);
+
+	lua_getglobal(L, "d");
+	data_ptr = (byte_t *) ldata_toptr(L, -1, &data_size);
+	assert(data_ptr == NULL);
+	assert(data_size == 0);
+
+	printf("test passed ;-)\n");
 	return 0;
-err:
-	return 1;
 }
 

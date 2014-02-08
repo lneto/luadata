@@ -18,3 +18,5 @@ function access_global()
 	-- should return nil if ldata_unref(d) has been called from C
 	return gd.uint16
 end
+
+d = data.new{0xff, 0xee, 0xdd, 0x00}
