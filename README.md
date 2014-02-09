@@ -85,6 +85,14 @@ for it. The data object will not be garbage-collected until it is unreferred.
 Removes the ptr from the data object and releases the data-object reference, allowing it to be garbage-collected. After that, it is safe
 to free the ptr pointer.
 
+### 2.3 conversion
+
+#### ```void * ldata_topointer(lua_State *L, int index, size_t *size);```
+
+Returns a pointer for the raw data referenced by the data object at the given index.
+If the value at the  given index is not a valid data object or the data object is empty (that is, it has no raw data),
+then it returns NULL and size will be set with zero.
+
 ## 3. Examples
 
 ### Lua
