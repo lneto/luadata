@@ -1,3 +1,6 @@
+#ifndef _LUA_COMPAT_502_H_
+#define _LUA_COMPAT_502_H_
+
 /******************************************************************************
 * Copyright (C) 1994-2013 Lua.org, PUC-Rio.
 *
@@ -20,10 +23,6 @@
 * TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ******************************************************************************/
-
-#ifndef _LUA_COMPAT_502_H_
-#define _LUA_COMPAT_502_H_
-
 #include "lua.h"
 
 LUALIB_API void *(luaL_testudata) (lua_State *L, int ud, const char *tname);

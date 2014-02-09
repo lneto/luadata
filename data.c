@@ -119,7 +119,7 @@ data_new_segment(lua_State *L, data_t *data, size_t offset, size_t length)
 	if (check_limits(data, offset, length))
 		return 0;
 
-	data_t *segment = new_data(L, data->raw, offset, length);
+	new_data(L, data->raw, offset, length);
 
 	data->raw->refcount++;
 	return 1;
