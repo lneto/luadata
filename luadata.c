@@ -112,7 +112,7 @@ apply_layout(lua_State *L)
 }
 
 static int
-gc(lua_State *L)
+__gc(lua_State *L)
 {
 	data_t *data = lua_touserdata(L, 1);
 	data_delete(L, data);
@@ -120,7 +120,7 @@ gc(lua_State *L)
 }
 
 static int
-get_field(lua_State *L)
+__index(lua_State *L)
 {
 	data_t *data = lua_touserdata(L, 1);
 
@@ -135,7 +135,7 @@ get_field(lua_State *L)
 }
 
 static int
-set_field(lua_State *L)
+__newindex(lua_State *L)
 {
 	data_t *data = lua_touserdata(L, 1);
 
@@ -154,7 +154,7 @@ end:
 }
 
 inline static int
-len(lua_State *L)
+__len(lua_State *L)
 {
 	data_t *data = lua_touserdata(L, 1);
 
@@ -171,10 +171,10 @@ static const luaL_Reg data_lib[ ] = {
 static const luaL_Reg data_m[ ] = {
 	{"layout"    , apply_layout},
 	{"segment"   , new_segment},
-	{"__index"   , get_field},
-	{"__newindex", set_field},
-	{"__gc"      , gc},
-	{"__len"     , len},
+	{"__index"   , __index},
+	{"__newindex", __newindex},
+	{"__gc"      , __gc},
+	{"__len"     , __len},
 	{NULL        , NULL}
 };
 
