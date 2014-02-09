@@ -93,6 +93,10 @@ Returns a pointer for the raw data referenced by the data object at the given in
 If the value at the  given index is not a valid data object or the data object is empty (that is, it has no raw data),
 then it returns NULL and size will be set with zero.
 
+Note, similarly to [lua_tolstring](http://www.lua.org/manual/5.1/manual.html#lua_tolstring),
+there is no guarantee that the pointer returned by ```ldata_topointer``` will be valid after the corresponding value is removed from the stack.
+
+
 ## 3. Examples
 
 ### Lua
