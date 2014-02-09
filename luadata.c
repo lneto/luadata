@@ -153,6 +153,15 @@ end:
 	return 0;
 }
 
+inline static int
+len(lua_State *L)
+{
+	data_t *data = lua_touserdata(L, 1);
+
+	luau_pushsize(L, data->length);
+	return 1;
+}
+
 static const luaL_Reg data_lib[ ] = {
 	{"new"   , new_data},
 	{"layout", new_layout},
@@ -165,6 +174,7 @@ static const luaL_Reg data_m[ ] = {
 	{"__index"   , get_field},
 	{"__newindex", set_field},
 	{"__gc"      , gc},
+	{"__len"     , len},
 	{NULL        , NULL}
 };
 
