@@ -28,9 +28,10 @@
 #ifndef _LUA_DATA_H_
 #define _LUA_DATA_H_
 
-#ifndef _KERNEL
+#ifdef _KERNEL
+#include <sys/types.h>
+#else
 #include <stddef.h>
-#include <stdbool.h>
 #endif
 
 #include <lua.h>
