@@ -41,6 +41,6 @@ extern int ldata_newref(lua_State *, void *, size_t);
 
 extern void ldata_unref(lua_State *, int);
 
-extern void * ldata_toptr(lua_State *, int, size_t *);
+extern void * ldata_topointer(lua_State *, int, size_t *);
 
 #endif /* _LUA_DATA_H_ */

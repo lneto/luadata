@@ -61,7 +61,7 @@ main(void)
 
 	/* get a pointer of data object created by the Lua script */
 	lua_getglobal(L, "d");
-	data_ptr = (byte_t *) ldata_toptr(L, -1, &data_size);
+	data_ptr = (byte_t *) ldata_topointer(L, -1, &data_size);
 	assert(data_ptr != NULL);
 
 	/* check size and values */
@@ -78,7 +78,7 @@ main(void)
 	lua_gc(L, LUA_GCCOLLECT, 0);
 
 	lua_getglobal(L, "d");
-	data_ptr = (byte_t *) ldata_toptr(L, -1, &data_size);
+	data_ptr = (byte_t *) ldata_topointer(L, -1, &data_size);
 	assert(data_ptr == NULL);
 	assert(data_size == 0);
 

@@ -211,7 +211,7 @@ ldata_unref(lua_State *L, int r)
 }
 
 void *
-ldata_toptr(lua_State *L, int index, size_t *size)
+ldata_topointer(lua_State *L, int index, size_t *size)
 {
 	data_t *data = data_test(L, index);
 	if (data == NULL) {
