@@ -242,8 +242,6 @@ ldata_topointer(lua_State *L, int index, size_t *size)
 
 MODULE(MODULE_CLASS_MISC, luadata, "lua");
 
-typedef int (*kluaopen_t)(void *) ;
-
 static int
 luadata_modcmd(modcmd_t cmd, void *opaque)
 {
@@ -251,7 +249,7 @@ luadata_modcmd(modcmd_t cmd, void *opaque)
 
 	switch (cmd) {
 	case MODULE_CMD_INIT:
-		error = lua_mod_register(DATA_LIB, (kluaopen_t) luaopen_data);
+		error = lua_mod_register(DATA_LIB, luaopen_data);
 		break;
 	case MODULE_CMD_FINI:
 		error = lua_mod_unregister(DATA_LIB);
