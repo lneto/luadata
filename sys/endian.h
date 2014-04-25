@@ -26,9 +26,18 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
+#ifndef _ENDIAN_H_
+#define _ENDIAN_H_
+
+#ifdef __MACH__
+#include <machine/endian.h>
+#else
 #include <endian.h>
+#endif
 
 #ifdef __GNUC__
 #define bswap64 __builtin_bswap64
 #endif
 
+#endif /* _ENDIAN_H_ */
