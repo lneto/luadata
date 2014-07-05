@@ -162,6 +162,16 @@ __len(lua_State *L)
 	return 1;
 }
 
+inline static int
+__tostring(lua_State *L)
+{
+	data_t *data = lua_touserdata(L, 1);
+
+	const char * ptr = (const char *) data->raw->ptr + data->offset;
+	lua_pushlstring(L, ptr, data->length);
+	return 1;
+}
+
 static const luaL_Reg data_lib[ ] = {
 	{"new"   , new_data},
 	{"layout", new_layout},
@@ -175,6 +185,7 @@ static const luaL_Reg data_m[ ] = {
 	{"__newindex", __newindex},
 	{"__gc"      , __gc},
 	{"__len"     , __len},
+	{"__tostring", __tostring},
 	{NULL        , NULL}
 };
 
@@ -249,10 +260,10 @@ luadata_modcmd(modcmd_t cmd, void *opaque)
 
 	switch (cmd) {
 	case MODULE_CMD_INIT:
-		error = lua_mod_register(DATA_LIB, luaopen_data);
+		error = klua_mod_register(DATA_LIB, luaopen_data);
 		break;
 	case MODULE_CMD_FINI:
-		error = lua_mod_unregister(DATA_LIB);
+		error = klua_mod_unregister(DATA_LIB);
 		break;
 	default:
 		error = ENOTTY;

@@ -1,5 +1,5 @@
-#ifndef _LUA_COMPAT_502_H_
-#define _LUA_COMPAT_502_H_
+#ifndef _LUA_TEST_UDATA_H_
+#define _LUA_TEST_UDATA_H_
 
 /******************************************************************************
 * Copyright (C) 1994-2013 Lua.org, PUC-Rio.
@@ -27,4 +27,4 @@
 
 LUALIB_API void *(luaL_testudata) (lua_State *L, int ud, const char *tname);
 
-#endif
+#endif /* _LUA_TEST_UDATA_H_ */

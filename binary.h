@@ -45,4 +45,8 @@ uint64_t binary_get_uint64(byte_t *, size_t, size_t, int);
 
 void binary_set_uint64(byte_t *, size_t, size_t, int, uint64_t);
 
+#define CEIL_DIV(x, y)	((x + y - 1) / y)
+#define BIT_TO_BYTE(x)	(CEIL_DIV(x, BYTE_BIT))
+#define BYTE_TO_BIT(x)	(x * BYTE_BIT)
+
 #endif /* _BINARY_H_ */

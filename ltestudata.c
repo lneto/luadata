@@ -1,4 +1,4 @@
-#include "luacompat502.h"
+#include "ltestudata.h"
 
 /******************************************************************************
 * Copyright (C) 1994-2013 Lua.org, PUC-Rio.

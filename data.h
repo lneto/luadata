@@ -64,6 +64,13 @@ void data_delete(lua_State *, data_t *);
 
 data_t * data_test(lua_State *, int);
 
+#define DATA_CHECK(L, narg, data)			\
+	do {						\
+		data = data_test(L, narg);		\
+		if (data == NULL)			\
+			return 0; /* return none */	\
+	} while(0)
+
 void data_apply_layout(lua_State *, data_t *, int);
 
 int data_get_field(lua_State *, data_t *, int);

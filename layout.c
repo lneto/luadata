@@ -33,7 +33,7 @@
 #include "layout.h"
 
 /* XXX: remove it after updating Lua */
-#include "luacompat502.h"
+#include "ltestudata.h"
 
 inline static layout_entry_t *
 test_entry(lua_State *L, int index)

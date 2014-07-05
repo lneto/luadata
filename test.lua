@@ -27,8 +27,8 @@ l = data.layout{
 -- create a new data object
 d2 = data.new{0xaa, 0xbb, 0xcc, 0xdd}
 
--- check bit length of d2
-assert(#d2 == 4*8)
+-- check byte length of d2
+assert(#d2 == 4)
 
 -- apply the layout 'l' to data 'd2'
 d2:layout(l)
@@ -45,11 +45,11 @@ assert(d2.uint4 == 0xc)
 -- access out of bounds
 assert(d2.overflow == nil)
 
--- create a new data segment, where offset = 8, length = 20
-d3 = d2:segment(8, 20)
+-- create a new data segment, where offset = 1, length = 3
+d3 = d2:segment(1, 3)
 
 -- check bit length of d3
-assert(#d3 == 20)
+assert(#d3 == 3)
 
 -- apply the layout 'l' into data 'd3'
 d3:layout(l)
@@ -57,14 +57,14 @@ d3:layout(l)
 -- access the first 16 bits of 'd3' segment 
 assert(d3.uint16be == 0xbbcc)
 
--- create a new data segment, where offset = 4, length is unbounded
-d4 = d3:segment(4)
+-- create a new data segment, where offset = 1, length is unbounded
+d4 = d3:segment(1)
 
 -- apply the layout 'l' into data 'd4'
 d4:layout(l)
 
 -- access the first 16 bits of 'd4' segment 
-assert(d4.uint16be == 0xbccd)
+assert(d4.uint16be == 0xccdd)
 
 -- create a new data segment comprehending the whole original data
 d5 = d2:segment()
