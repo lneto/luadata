@@ -62,8 +62,8 @@ d2:layout{byte = {0, 8}} -- creates and applies a new layout into d2 data object
 
 Returns a new data object pointing for the same raw data (memory region) of a given data object, but limited by offset and length parameters. If length is ommited, it assumes that length is the original length minus the offset. If offset is ommited, it assumes the whole data. For example:
 ```Lua
-d1 = d:segment(8, 16) --> returns a data object with 2 bytes.
-d2 = d:segment(4) --> returns a data object with 20 bits.
+d1 = d:segment(0, 2) --> returns a data object with 2 bytes.
+d2 = d:segment(2) --> returns a data object with 1 byte.
 d3 = d:segment() --> returns a data object with 3 bytes.
 ```
 
