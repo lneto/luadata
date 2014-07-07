@@ -208,7 +208,7 @@ __newindex(lua_State *L)
 
 	lua_Integer value = lua_tointeger(L, 3);
 
-	data_set_field(L, data, 2, value);
+	data_set_field(L, data, 2);
 end:
 	lua_pop(L, 1);
 	return 0;

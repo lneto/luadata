@@ -33,6 +33,8 @@
 #include "binary.h"
 #include "layout.h"
 
+#include <string.h>
+
 #define LUA_INTEGER_BYTE	(sizeof(lua_Integer))
 #define LUA_INTEGER_BIT		(LUA_INTEGER_BYTE * BYTE_BIT)
 
@@ -191,6 +193,15 @@ data_get_field(lua_State *L, data_t *data, int key_ix)
 	if (!check_entry(data, entry))
 		return 0;
 
+	if (entry->isstring) {
+		char *s = luau_malloc(L, entry->length + 1);
+		memmove(s, data->raw->ptr + ENTRY_BIT_OFFSET(data, entry), entry->length);
+		s[entry->length] = '\0';
+		lua_pushstring(L, s);
+		luau_free(L, s, entry->length + 1);
+		return 1;
+	}
+
 	/* assertion: LUA_INTEGER_BIT <= 64 */
 	lua_Integer value = binary_get_uint64(BINARY_PARMS(data, entry));
 	lua_pushinteger(L, value);
@@ -198,7 +209,7 @@ data_get_field(lua_State *L, data_t *data, int key_ix)
 }
 
 void
-data_set_field(lua_State *L, data_t *data, int key_ix, lua_Integer value)
+data_set_field(lua_State *L, data_t *data, int key_ix)
 {
 	if (!check_raw_ptr(data))
 		return;
@@ -207,5 +218,19 @@ data_set_field(lua_State *L, data_t *data, int key_ix, lua_Integer value)
 	if (!check_entry(data, entry))
 		return;
 
+	if (entry->isstring) {
+		if (!lua_isstring(L, 3)) {
+			lua_pushstring(L, "invalid data for string");
+			lua_error(L);
+		}
+
+		/* XXX: check overflow */
+		const char *s = lua_tostring(L, 3);
+		size_t len = strlen(s);
+		memmove(data->raw->ptr + ENTRY_BIT_OFFSET(data, entry), s, len + 1);
+		return;
+	}
+
+	lua_Integer value = luaL_checknumber(L, 3);
 	binary_set_uint64(BINARY_PARMS(data, entry), value);
 }

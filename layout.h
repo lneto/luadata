@@ -49,6 +49,7 @@ typedef struct {
 	size_t  offset;
 	size_t  length;
 	int     endian;
+	bool	isstring;
 } layout_entry_t;
 
 void layout_load(lua_State *, int);

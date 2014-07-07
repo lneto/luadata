@@ -50,6 +50,7 @@ init_layout(layout_entry_t *entry)
 	entry->offset = 0;
 	entry->length = 0;
 	entry->endian = LAYOUT_ENDIAN_DEFAULT;
+	entry->isstring = 0;
 }
 
 static void
@@ -63,6 +64,8 @@ load_endian(lua_State *L, layout_entry_t *entry)
 		entry->endian = LITTLE_ENDIAN;
 	else if (endian[0] == 'h')
 		entry->endian = BYTE_ORDER;
+ 	else if (endian[0] == 's')
+		entry->isstring = 1;
 }
 
 /* format: {<offset>, <length>, <endian>, <step>} */
@@ -120,6 +123,7 @@ copy_entry(layout_entry_t *dst, layout_entry_t *src)
 	dst->offset = src->offset;
 	dst->length = src->length;
 	dst->endian = src->endian;
+	dst->isstring = src->isstring;
 }
 
 static int

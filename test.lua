@@ -114,4 +114,17 @@ assert(d == nil)
 d = data.new('')
 assert(d == nil)
 
+d6 = data.new{0x61, 0x62, 0x63, 0x64, 0x65, 0x66}
+d6:layout{a = {0, 8}, b = {0, 16}, c = {32, 8}, s = {0, 48, 's'}}
+
+assert(d6.c == 101)
+assert(d6.s == "abcdef")
+
+d6.s = "hij"
+
+assert(d6.a == 104)
+assert(d6.b == 0x6869)
+assert(d6.c == 101)
+assert(d6.s == "hij")
+
 print("test passed ;-)")
