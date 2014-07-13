@@ -33,9 +33,6 @@
 #include "binary.h"
 #include "layout.h"
 
-/* XXX: remove it after updating Lua */
-#include "ltestudata.h"
-
 #define LUA_INTEGER_BYTE	(sizeof(lua_Integer))
 #define LUA_INTEGER_BIT		(LUA_INTEGER_BYTE * BYTE_BIT)
 
@@ -162,7 +159,11 @@ data_delete(lua_State *L, data_t *data)
 inline data_t *
 data_test(lua_State *L, int index)
 {
+#if LUA_VERSION_NUM >= 502
 	return (data_t *) luaL_testudata(L, index, DATA_USERDATA);
+#else
+	return (data_t *) luaL_checkudata(L, index, DATA_USERDATA);
+#endif
 }
 
 inline void

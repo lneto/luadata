@@ -58,7 +58,11 @@ new_data_num(lua_State *L, size_t *len)
 static char *
 new_data_tab(lua_State *L, size_t *len)
 {
+#if LUA_VERSION_NUM >= 502
+	*len = lua_rawlen(L, 1);
+#else
 	*len = lua_objlen(L, 1);
+#endif
 	if (*len == 0)
 		return NULL;
 
@@ -253,12 +257,22 @@ static const luaL_Reg layout_entry_m[ ] = {
 int
 luaopen_data(lua_State *L)
 {
+	luaL_newmetatable(L, LAYOUT_ENTRY_USERDATA);
+#if LUA_VERSION_NUM >= 502
+	luaL_setfuncs(L, layout_entry_m, 0);
+#else
+	luaL_register(L, NULL, layout_entry_m);
+#endif
+	lua_pop(L, 1);
+
 	luaL_newmetatable(L, DATA_USERDATA);
+#if LUA_VERSION_NUM >= 502
+	luaL_setfuncs(L, data_m, 0);
+	luaL_newlib(L, data_lib);
+#else
 	luaL_register(L, NULL, data_m);
 	luaL_register(L, DATA_LIB, data_lib);
-
-	luaL_newmetatable(L, LAYOUT_ENTRY_USERDATA);
-	luaL_register(L, NULL, layout_entry_m);
+#endif
 
 	return 1;
 }

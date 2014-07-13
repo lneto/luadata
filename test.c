@@ -17,7 +17,12 @@ main(void)
 	lua_State *L = luaL_newstate();
 
 	/* open luadata library */
+#if LUA_VERSION >= 502
+	luaL_requiref(L, "data", luaopen_data, 1);
+#else
 	luaopen_data(L);
+#endif
+	lua_pop(L, 1);  /* remove lib */
 
 	/* load a script */
 	assert(luaL_dofile(L, "ctest.lua") == 0);

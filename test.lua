@@ -1,4 +1,4 @@
-require "data"
+local data = require'data'
 
 -- create a new data object
 d1 = data.new{0x0f}

@@ -32,13 +32,16 @@
 
 #include "layout.h"
 
-/* XXX: remove it after updating Lua */
-#include "ltestudata.h"
-
 inline static layout_entry_t *
 test_entry(lua_State *L, int index)
 {
-	return (layout_entry_t *) luaL_testudata(L, index, LAYOUT_ENTRY_USERDATA);
+#if LUA_VERSION_NUM >= 502
+	return (layout_entry_t *)
+		luaL_testudata(L, index, LAYOUT_ENTRY_USERDATA);
+#else
+	return (layout_entry_t *)
+		luaL_checkudata(L, index, LAYOUT_ENTRY_USERDATA);
+#endif
 }
 
 inline static void
