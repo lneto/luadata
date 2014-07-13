@@ -90,4 +90,28 @@ collectgarbage()
 -- check that d5 is still valid
 assert(d5.uint4 == 0xf)
 
+-- create a new data object with 2 bytes 
+d = data.new(2)
+d:layout(l)
+d.uint16be = 0xBEEF
+assert(d.uint16be == 0xBEEF)
+
+-- create a new data object from a string
+d = data.new'\a'
+d:layout{ascii = {1, 7}} 
+assert(d.ascii == 7)
+
+-- check invalid data creation 
+d = data.new()
+assert(d == nil)
+
+d = data.new(0)
+assert(d == nil)
+
+d = data.new{}
+assert(d == nil)
+
+d = data.new('')
+assert(d == nil)
+
 print("test passed ;-)")

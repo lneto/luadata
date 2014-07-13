@@ -25,6 +25,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#ifndef _KERNEL
+#include <string.h>
+#else
+#include <lib/libkern/libkern.h>
+#endif
+
 #include <lua.h>
 #include <lauxlib.h>
 
@@ -34,36 +40,76 @@
 #include "data.h"
 #include "layout.h"
 
-static int
-new_data(lua_State *L)
+static char *
+new_data_num(lua_State *L, size_t *len)
 {
-	char   *data;
-	size_t len;
+	*len = luau_tosize(L, 1);
+	if (*len == 0)
+		return NULL;
 
-	if (lua_isnumber(L, 1)) {
-		len = lua_tonumber(L, -1);
-		data = (char *) luau_malloc(L, len);
-		memset(data, 0, len);
-		data_new(L, (void *) data, len, true);
-		return 1;
-	}
+	char *data = (char *) luau_malloc(L, *len);
+	if (data == NULL)
+		return NULL;
 
-	if (!lua_istable(L, 1))
-		return 0;
-	
-	len = lua_objlen(L, 1);
-	data = (char *) luau_malloc(L, len);
+	memset(data, 0, *len);
+	return data;
+}
+
+static char *
+new_data_tab(lua_State *L, size_t *len)
+{
+	*len = lua_objlen(L, 1);
+	if (*len == 0)
+		return NULL;
+
+	char *data = (char *) luau_malloc(L, *len);
+	if (data == NULL)
+		return NULL;
 
 	size_t i = 0;
 	lua_pushnil(L);  /* first key */
-	while (lua_next(L, 1) != 0 && i < len) {
+	while (lua_next(L, 1) != 0 && i < *len) {
 		/* uses 'key' (at index -2) and 'value' (at index -1) */
 		data[ i++ ] = (char) lua_tointeger(L, -1);
 		/* removes 'value'; keeps 'key' for next iteration */
 		lua_pop(L, 1);
 	}
-	data_new(L, (void *) data, len, true);
+	return data;
+}
 
+static char *
+new_data_str(lua_State *L, size_t *len)
+{
+	const char *str = lua_tolstring(L, 1, len);
+	if (str == NULL || *len == 0)
+		return NULL;
+
+	char *data = (char *) luau_malloc(L, *len);
+	if (data == NULL)
+		return NULL;
+
+	memcpy(data, str, *len);
+	return data;
+}
+
+static int
+new_data(lua_State *L)
+{
+	char   *data = NULL;
+	size_t len   = 0;
+
+	int type = lua_type(L, 1);
+	if (type == LUA_TNUMBER)
+		data = new_data_num(L, &len);
+	else if (type == LUA_TTABLE)
+		data = new_data_tab(L, &len);
+	else if (type == LUA_TSTRING)
+		data = new_data_str(L, &len);
+
+	if (data == NULL || len == 0)
+		return 0;
+
+	data_new(L, (void *) data, len, true);
 	return 1;
 }
 

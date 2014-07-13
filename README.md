@@ -14,6 +14,20 @@ Returns a new data object initialized with the given byte array. For example:
 d1 = data.new{0xFF, 0xFE, 0x00} --> returns a data object with 3 bytes.
 ```
 
+#### ```data.new(number)```
+
+Returns a new data object with the size defined by the given argument in bytes. For example:
+```Lua
+d2 = data.new(2) --> returns a data object with 2 bytes.
+```
+
+#### ```data.new(string)```
+
+Returns a new data object initialized with the given string. For example:
+```Lua
+d2 = data.new'\a' --> returns a data object with 1 byte.
+```
+
 ### 1.2 layout
 
 #### ```data.layout(table)```
