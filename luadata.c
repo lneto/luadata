@@ -37,11 +37,22 @@
 static int
 new_data(lua_State *L)
 {
-	if(!lua_istable(L, 1))
-		return 0;
+	char   *data;
+	size_t len;
 
-	size_t len   = lua_objlen(L, 1);
-	char   *data = (char *) luau_malloc(L, len);
+	if (lua_isnumber(L, 1)) {
+		len = lua_tonumber(L, -1);
+		data = (char *) luau_malloc(L, len);
+		memset(data, 0, len);
+		data_new(L, (void *) data, len, true);
+		return 1;
+	}
+
+	if (!lua_istable(L, 1))
+		return 0;
+	
+	len = lua_objlen(L, 1);
+	data = (char *) luau_malloc(L, len);
 
 	size_t i = 0;
 	lua_pushnil(L);  /* first key */
