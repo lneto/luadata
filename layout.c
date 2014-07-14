@@ -69,7 +69,11 @@ load_endian(lua_State *L, layout_entry_t *entry)
 static void
 load_entry_numbered(lua_State *L, layout_entry_t *entry)
 {
+#if LUA_VERSION_NUM >= 502
+	size_t array_len = lua_rawlen(L, -1);
+#else
 	size_t array_len = lua_objlen(L, -1);
+#endif
 
 	if (array_len >= 1)
 		entry->offset = luau_getarray_integer(L, -1, 1);

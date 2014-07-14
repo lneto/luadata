@@ -17,7 +17,7 @@ main(void)
 	lua_State *L = luaL_newstate();
 
 	/* open luadata library */
-#if LUA_VERSION >= 502
+#if LUA_VERSION_NUM >= 502
 	luaL_requiref(L, "data", luaopen_data, 1);
 #else
 	luaopen_data(L);
