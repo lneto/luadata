@@ -45,11 +45,13 @@
 
 #define LAYOUT_ENDIAN_DEFAULT	BIG_ENDIAN
 
+typedef enum { ENTRY_TNUMBER, ENTRY_TSTRING } entry_type_t;
+
 typedef struct {
-	size_t  offset;
-	size_t  length;
-	int     endian;
-	bool	isstring;
+	size_t        offset;
+	size_t        length;
+	entry_type_t  type;
+	int           endian;
 } layout_entry_t;
 
 void layout_load(lua_State *, int);

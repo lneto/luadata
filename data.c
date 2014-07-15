@@ -25,6 +25,12 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#ifndef _KERNEL
+#include <string.h>
+#else
+#include <lib/libkern/libkern.h>
+#endif
+
 #include <lauxlib.h>
 
 #include "luautil.h"
@@ -32,8 +38,6 @@
 #include "data.h"
 #include "binary.h"
 #include "layout.h"
-
-#include <string.h>
 
 #define LUA_INTEGER_BYTE	(sizeof(lua_Integer))
 #define LUA_INTEGER_BIT		(LUA_INTEGER_BYTE * BYTE_BIT)
@@ -64,7 +68,7 @@ check_limits(data_t *data, size_t offset, size_t length)
 inline static bool
 check_entry_limits(data_t *data, layout_entry_t *entry)
 {
-	if (entry->isstring) {
+	if (entry->type == ENTRY_TSTRING) {
 		size_t offset = entry->offset + data->offset;
 		size_t length = entry->length;
 		return check_limits(data, offset, length);
@@ -222,7 +226,7 @@ data_get_field(lua_State *L, data_t *data, int key_ix)
 	if (!check_entry(data, entry))
 		return 0;
 
-	if (entry->isstring)
+	if (entry->type == ENTRY_TSTRING)
 		return data_get_str(L, data, entry);
 
 	return data_get_num(L, data, entry);
@@ -263,7 +267,7 @@ data_set_field(lua_State *L, data_t *data, int key_ix)
 	if (!check_entry(data, entry))
 		return;
 
-	if (entry->isstring)
+	if (entry->type == ENTRY_TSTRING)
 		data_set_str(L, data, entry);
 	else
 		data_set_num(L, data, entry);
