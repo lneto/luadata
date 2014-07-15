@@ -103,15 +103,13 @@ assert(d.ascii == 7)
 
 -- create a string field in a layout
 d6 = data.new("abcdef")
-d6:layout{a = {0, 8}, b = {0, 16}, c = {32, 8}, s = {0, 6, 's'}}
+d6:layout{str = {0, 6, 's'}, overflow = {1, 6, 's'}}
 
-assert(d6.c == 101)
-assert(d6.s == "abcdef")
+assert(d6.str == "abcdef")
+assert(d6.overflow == nil)
 
-d6.s = "hij"
-assert(d6.s == "hijdef")
-assert(d6.a == 104)
-assert(d6.b == 0x6869)
+d6.str = "hij"
+assert(d6.str == "hijdef")
 
 -- check invalid data creation 
 d = data.new()
