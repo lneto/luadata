@@ -34,12 +34,12 @@ d2 = data.new'\a' --> returns a data object with 1 byte.
 
 Returns a new layout table based on table argument, which should have the following formats for its fields:
 
-1. ```field = {<offset>, <length> [, <endian>]}``` or
-2. ```field = {offset = <offset>, length = <length> [, endian = <endian>]}```
+1. ```field = {<offset>, <length> [, (<endian> | <type>)]}``` or
+2. ```field = {offset = <offset>, length = <length> [, endian = <endian>, type = <type>]}```
 
-Where, field is the name of the field, \<offset\> is the field offset, \<length\> is the field length, \<endian\> is a string that indicates the field endianness ('host', 'net', 'little', 'big', 'string'). The default value for endian is 'big'.
+Where, field is the name of the field, \<offset\> is the field offset, \<length\> is the field length, ( \<endian\> | \<type\> )  is either a string that indicates the field endianness ('host', 'net', 'little', 'big') or its type ('number', 'string'). The default value for endian (or type) is 'big'.
 
-When \<endian\> is not 'string', offset and length are in bits (MSB 0). Otherwise, offset and length are in bytes.
+When (\<endian\> | \<type\>) is not 'string', offset and length are in bits (MSB 0). Otherwise, offset and length are in bytes.
 
 A field lying outside the bounds of the data object is always nil.
 
