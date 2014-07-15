@@ -64,6 +64,12 @@ check_limits(data_t *data, size_t offset, size_t length)
 inline static bool
 check_entry_limits(data_t *data, layout_entry_t *entry)
 {
+	if (entry->isstring) {
+		size_t offset = entry->offset + data->offset;
+		size_t length = entry->length;
+		return check_limits(data, offset, length);
+	} 
+
 	size_t offset = ENTRY_BYTE_OFFSET(data, entry);
 	size_t length = BIT_TO_BYTE(entry->length);
 
@@ -197,7 +203,7 @@ data_get_str(lua_State *L, data_t *data, layout_entry_t *entry)
 {
 	char *s = luau_malloc(L, entry->length + 1);
 
-	memmove(s, data->raw->ptr + ENTRY_BIT_OFFSET(data, entry), entry->length);
+	memmove(s, data->raw->ptr + data->offset + entry->offset, entry->length);
 	s[entry->length] = '\0';
 
 	lua_pushstring(L, s);
@@ -239,11 +245,11 @@ data_set_str(lua_State *L, data_t *data, layout_entry_t *entry)
 
 	const char *s = lua_tostring(L, 3);
 	size_t len = strlen(s);
-	if(!check_limits(data, ENTRY_BIT_OFFSET(data, entry), len)) {
+	if(!check_limits(data, data->offset + entry->offset, len)) {
 		lua_pushstring(L, "string too big for entry");
 		lua_error(L);
 	}
-	memmove(data->raw->ptr + ENTRY_BIT_OFFSET(data, entry), s, len);
+	memmove(data->raw->ptr + data->offset + entry->offset, s, len);
 	return;
 }
 
