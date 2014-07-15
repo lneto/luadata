@@ -101,6 +101,16 @@ d = data.new'\a'
 d:layout{ascii = {1, 7}} 
 assert(d.ascii == 7)
 
+-- create a string field in a layout
+d6 = data.new("abcdef")
+d6:layout{str = {0, 6, 's'}, overflow = {1, 6, 's'}}
+
+assert(d6.str == "abcdef")
+assert(d6.overflow == nil)
+
+d6.str = "hij"
+assert(d6.str == "hijdef")
+
 -- check invalid data creation 
 d = data.new()
 assert(d == nil)

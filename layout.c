@@ -50,6 +50,18 @@ init_layout(layout_entry_t *entry)
 	entry->offset = 0;
 	entry->length = 0;
 	entry->endian = LAYOUT_ENDIAN_DEFAULT;
+	entry->type   = ENTRY_TNUMBER;
+}
+
+static void
+load_type(lua_State *L, layout_entry_t *entry)
+{
+	const char *type = lua_tostring(L, -1);
+
+	if (type[0] == 'n')
+		entry->type = ENTRY_TNUMBER;
+	else if (type[0] == 's')
+		entry->type = ENTRY_TSTRING;
 }
 
 static void
@@ -82,8 +94,9 @@ load_entry_numbered(lua_State *L, layout_entry_t *entry)
 	if (array_len >= 3) {
 		luau_getarray(L, -1, 3);
 		load_endian(L, entry);
+		load_type(L, entry);
 		lua_pop(L, 1);
-	}
+	}	
 }
 
 /* format: {offset = <offset>, length = <length>, endian = <endian>, step = <step>} */
@@ -104,6 +117,11 @@ load_entry_named(lua_State *L, layout_entry_t *entry)
 	if (lua_isstring(L, -1))
 		load_endian(L, entry);
 	lua_pop(L, 1);
+
+	lua_getfield(L, -1, "type");
+	if (lua_isstring(L, -1))
+		load_type(L, entry);
+	lua_pop(L, 1);
 }
 
 static void
@@ -119,6 +137,7 @@ copy_entry(layout_entry_t *dst, layout_entry_t *src)
 {
 	dst->offset = src->offset;
 	dst->length = src->length;
+	dst->type   = src->type;
 	dst->endian = src->endian;
 }
 
