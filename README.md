@@ -34,10 +34,14 @@ d2 = data.new'\a' --> returns a data object with 1 byte.
 
 Returns a new layout table based on table argument, which should have the following formats for its fields:
 
-1. ```field = {<offset>, <length> [, <endian>]}``` or
-2. ```field = {offset = <offset>, length = <length> [, endian = <endian>]}```
+1. ```field = {<offset>, <length> [, (<endian> | <type>)]}``` or
+2. ```field = {offset = <offset>, length = <length> [, endian = <endian>, type = <type>]}```
 
-Where, field is the name of the field, \<offset\> is the offset in bits (MSB 0), \<length\> is the length in bits, endian is a string that indicates the field endianness ('host', 'net', 'little', 'big'). The default value for endian is 'big'.
+Where, field is the name of the field, \<offset\> is the field offset, \<length\> is the field length, ( \<endian\> | \<type\> )  is either a string that indicates the field endianness ('host', 'net', 'little', 'big') or its type ('number', 'string'). The default value for endian (or type) is 'big'.
+
+When (\<endian\> | \<type\>) is not 'string', offset and length are in bits (MSB 0). Otherwise, offset and length are in bytes.
+
+A field lying outside the bounds of the data object is always nil.
 
 Here are a couple examples:
 
@@ -47,7 +51,8 @@ Here are a couple examples:
 l1 = data.layout{
   msb      = {0,  1},
   uint32   = {0, 32},
-  uint64le = {0, 64, 'little'}
+  uint64le = {0, 64, 'little'},
+  str      = {0, 3, 'string'}
 }
 
 ```
@@ -57,7 +62,8 @@ l1 = data.layout{
 ```Lua
 l2 = data.layout{
   msb                  = {offset = 0, length = 1},
-  net_unaligned_uint16 = {offset = 1, length = 16, endian = 'net'}
+  net_unaligned_uint16 = {offset = 1, length = 16, endian = 'net'},
+  str                  = {offset = 0, length = 3, endian = 'string'}
 }
 ```
 

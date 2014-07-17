@@ -75,6 +75,6 @@ void data_apply_layout(lua_State *, data_t *, int);
 
 int data_get_field(lua_State *, data_t *, int);
 
-void data_set_field(lua_State *, data_t *, int, lua_Integer);
+void data_set_field(lua_State *, data_t *, int);
 
 #endif /* _DATA_H_ */
