@@ -206,9 +206,7 @@ __newindex(lua_State *L)
 		/* shouldn't overwrite a method */
 		goto end;
 
-	lua_Integer value = lua_tointeger(L, 3);
-
-	data_set_field(L, data, 2);
+	data_set_field(L, data, 2, 3);
 end:
 	lua_pop(L, 1);
 	return 0;
@@ -228,7 +226,7 @@ __tostring(lua_State *L)
 {
 	data_t *data = lua_touserdata(L, 1);
 
-	const char * ptr = (const char *) data->raw->ptr + data->offset;
+	const char * ptr = (const char *) data_get_ptr(data);
 	lua_pushlstring(L, ptr, data->length);
 	return 1;
 }

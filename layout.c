@@ -49,8 +49,8 @@ init_layout(layout_entry_t *entry)
 {
 	entry->offset = 0;
 	entry->length = 0;
+	entry->type   = LAYOUT_TYPE_DEFAULT;
 	entry->endian = LAYOUT_ENDIAN_DEFAULT;
-	entry->type   = ENTRY_TNUMBER;
 }
 
 static void
@@ -59,9 +59,9 @@ load_type(lua_State *L, layout_entry_t *entry)
 	const char *type = lua_tostring(L, -1);
 
 	if (type[0] == 'n')
-		entry->type = ENTRY_TNUMBER;
+		entry->type = LAYOUT_TNUMBER;
 	else if (type[0] == 's')
-		entry->type = ENTRY_TSTRING;
+		entry->type = LAYOUT_TSTRING;
 }
 
 static void
@@ -77,7 +77,6 @@ load_endian(lua_State *L, layout_entry_t *entry)
 		entry->endian = BYTE_ORDER;
 }
 
-/* format: {<offset>, <length>, <endian>, <step>} */
 static void
 load_entry_numbered(lua_State *L, layout_entry_t *entry)
 {
@@ -93,13 +92,16 @@ load_entry_numbered(lua_State *L, layout_entry_t *entry)
 		entry->length = luau_getarray_integer(L, -1, 2);
 	if (array_len >= 3) {
 		luau_getarray(L, -1, 3);
-		load_endian(L, entry);
 		load_type(L, entry);
 		lua_pop(L, 1);
-	}	
+	}
+	if (array_len >= 4) {
+		luau_getarray(L, -1, 4);
+		load_endian(L, entry);
+		lua_pop(L, 1);
+	}
 }
 
-/* format: {offset = <offset>, length = <length>, endian = <endian>, step = <step>} */
 static void
 load_entry_named(lua_State *L, layout_entry_t *entry)
 {
@@ -113,14 +115,14 @@ load_entry_named(lua_State *L, layout_entry_t *entry)
 		entry->length = lua_tointeger(L, -1);
 	lua_pop(L, 1);
 
-	lua_getfield(L, -1, "endian");
-	if (lua_isstring(L, -1))
-		load_endian(L, entry);
-	lua_pop(L, 1);
-
 	lua_getfield(L, -1, "type");
 	if (lua_isstring(L, -1))
 		load_type(L, entry);
+	lua_pop(L, 1);
+
+	lua_getfield(L, -1, "endian");
+	if (lua_isstring(L, -1))
+		load_endian(L, entry);
 	lua_pop(L, 1);
 }
 

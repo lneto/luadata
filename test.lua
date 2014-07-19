@@ -15,10 +15,11 @@ d1.lsb = 0
 -- access the whole byte again
 assert(d1.byte == 0x0e)
 
+print(data.layout)
 -- create a new layout
 l = data.layout{
 	uint16be = {0, 16},
-	uint16le = {0, 16, 'l'},
+	uint16le = {0, 16, 'number', 'le'},
 	uint4    = {16, 4},
 	uint9    = {20, 9},
 	overflow = {32, 1},

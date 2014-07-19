@@ -31,6 +31,8 @@
 #include <lib/libkern/libkern.h>
 #endif
 
+#include <sys/param.h>
+
 #include <lauxlib.h>
 
 #include "luautil.h"
@@ -66,14 +68,8 @@ check_limits(data_t *data, size_t offset, size_t length)
 	((BIT_TO_BYTE(entry->offset + 1) - 1) + data->offset)
 
 inline static bool
-check_entry_limits(data_t *data, layout_entry_t *entry)
+check_num_limits(data_t *data, layout_entry_t *entry)
 {
-	if (entry->type == ENTRY_TSTRING) {
-		size_t offset = entry->offset + data->offset;
-		size_t length = entry->length;
-		return check_limits(data, offset, length);
-	} 
-
 	size_t offset = ENTRY_BYTE_OFFSET(data, entry);
 	size_t length = BIT_TO_BYTE(entry->length);
 
@@ -82,9 +78,11 @@ check_entry_limits(data_t *data, layout_entry_t *entry)
 }
 
 inline static bool
-check_entry(data_t *data, layout_entry_t *entry)
+check_str_limits(data_t *data, layout_entry_t *entry)
 {
-	return entry != NULL && check_entry_limits(data, entry);
+	size_t offset = entry->offset + data->offset;
+	size_t length = entry->length;
+	return check_limits(data, offset, length);
 }
 
 inline static layout_entry_t *
@@ -128,6 +126,62 @@ new_data(lua_State *L, data_raw_t *raw, size_t offset, size_t length)
 	lua_setmetatable(L, -2);
 
 	return data;
+}
+
+#define ENTRY_BIT_OFFSET(data, entry) \
+	(BYTE_TO_BIT(data->offset) + entry->offset)
+
+#define BINARY_PARMS(data, entry) \
+	data->raw->ptr, ENTRY_BIT_OFFSET(data, entry), \
+	entry->length, entry->endian
+
+static int
+get_num(lua_State *L, data_t *data, layout_entry_t *entry)
+{
+	if (!check_num_limits(data, entry))
+		return 0;
+
+	/* assertion: LUA_INTEGER_BIT <= 64 */
+	lua_Integer value = binary_get_uint64(BINARY_PARMS(data, entry));
+	lua_pushinteger(L, value);
+	return 1;
+}
+
+inline static int
+get_str(lua_State *L, data_t *data, layout_entry_t *entry)
+{
+	if (!check_str_limits(data, entry))
+		return 0;
+
+	const char *ptr = (const char *) data_get_ptr(data); 
+	const char *s = ptr + entry->offset;
+	lua_pushlstring(L, s, entry->length);
+	return 1;
+}
+
+inline static void
+set_num(lua_State *L, data_t *data, layout_entry_t *entry, int value_ix)
+{
+	if (!check_num_limits(data, entry))
+		return;
+
+	lua_Integer value = lua_tointeger(L, value_ix);
+	binary_set_uint64(BINARY_PARMS(data, entry), value);
+}
+
+static void
+set_str(lua_State *L, data_t *data, layout_entry_t *entry, int value_ix)
+{
+	if (!check_str_limits(data, entry))
+		return;
+
+	size_t len;
+	const char *s = lua_tolstring(L, value_ix, &len);
+	if (s == NULL)
+		return;
+
+	char *ptr = (char *) data_get_ptr(data); 
+	memcpy(ptr + entry->offset, s, MIN(len, entry->length));
 }
 
 inline data_t *
@@ -186,36 +240,6 @@ data_apply_layout(lua_State *L, data_t *data, int layout_ix)
 	data->layout = luau_ref(L);
 }
 
-#define ENTRY_BIT_OFFSET(data, entry) \
-	(BYTE_TO_BIT(data->offset) + entry->offset)
-
-#define BINARY_PARMS(data, entry) \
-	data->raw->ptr, ENTRY_BIT_OFFSET(data, entry), \
-	entry->length, entry->endian
-
-static int
-data_get_num(lua_State *L, data_t *data, layout_entry_t *entry)
-{
-	/* assertion: LUA_INTEGER_BIT <= 64 */
-	lua_Integer value = binary_get_uint64(BINARY_PARMS(data, entry));
-	lua_pushinteger(L, value);
-	return 1;
-}
-
-static int
-data_get_str(lua_State *L, data_t *data, layout_entry_t *entry)
-{
-	char *s = luau_malloc(L, entry->length + 1);
-
-	memmove(s, data->raw->ptr + data->offset + entry->offset, entry->length);
-	s[entry->length] = '\0';
-
-	lua_pushstring(L, s);
-	luau_free(L, s, entry->length + 1);
-	return 1;
-}
-	
-	
 int
 data_get_field(lua_State *L, data_t *data, int key_ix)
 {
@@ -223,52 +247,32 @@ data_get_field(lua_State *L, data_t *data, int key_ix)
 		return 0;
 
 	layout_entry_t *entry = get_entry(L, data, key_ix);
-	if (!check_entry(data, entry))
-		return 0;
-
-	if (entry->type == ENTRY_TSTRING)
-		return data_get_str(L, data, entry);
-
-	return data_get_num(L, data, entry);
-}
-
-void
-data_set_num(lua_State *L, data_t *data, layout_entry_t *entry)
-{
-	lua_Integer value = luaL_checknumber(L, 3);
-	binary_set_uint64(BINARY_PARMS(data, entry), value);
-}
-
-void
-data_set_str(lua_State *L, data_t *data, layout_entry_t *entry)
-{
-	if (!lua_isstring(L, 3)) {
-		lua_pushstring(L, "invalid string");
-		lua_error(L);
+	switch (entry->type) {
+	case LAYOUT_TNUMBER:
+		return get_num(L, data, entry);
+	case LAYOUT_TSTRING:
+		return get_str(L, data, entry);
 	}
-
-	const char *s = lua_tostring(L, 3);
-	size_t len = strlen(s);
-	if(!check_limits(data, data->offset + entry->offset, len)) {
-		lua_pushstring(L, "string too big for entry");
-		lua_error(L);
-	}
-	memmove(data->raw->ptr + data->offset + entry->offset, s, len);
-	return;
+	return 0; /* unreached */
 }
 
 void
-data_set_field(lua_State *L, data_t *data, int key_ix)
+data_set_field(lua_State *L, data_t *data, int key_ix, int value_ix)
 {
 	if (!check_raw_ptr(data))
 		return;
 
 	layout_entry_t *entry = get_entry(L, data, key_ix);
-	if (!check_entry(data, entry))
-		return;
+	switch (entry->type) {
+	case LAYOUT_TNUMBER:
+		set_num(L, data, entry, value_ix);
+	case LAYOUT_TSTRING:
+		set_str(L, data, entry, value_ix);
+	}
+}
 
-	if (entry->type == ENTRY_TSTRING)
-		data_set_str(L, data, entry);
-	else
-		data_set_num(L, data, entry);
+inline void *
+data_get_ptr(data_t * data)
+{
+	return (void *) ((char *) data->raw->ptr + data->offset);
 }

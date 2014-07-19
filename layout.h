@@ -43,14 +43,18 @@
 
 #define LAYOUT_STAMP 		"__layout_stamp"
 
+#define LAYOUT_TYPE_DEFAULT	LAYOUT_TNUMBER
 #define LAYOUT_ENDIAN_DEFAULT	BIG_ENDIAN
 
-typedef enum { ENTRY_TNUMBER, ENTRY_TSTRING } entry_type_t;
+typedef enum {
+	LAYOUT_TNUMBER = 0,
+	LAYOUT_TSTRING
+} layout_type_t;
 
 typedef struct {
 	size_t        offset;
 	size_t        length;
-	entry_type_t  type;
+	layout_type_t type;
 	int           endian;
 } layout_entry_t;
 
