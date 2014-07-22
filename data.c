@@ -266,8 +266,10 @@ data_set_field(lua_State *L, data_t *data, int key_ix, int value_ix)
 	switch (entry->type) {
 	case LAYOUT_TNUMBER:
 		set_num(L, data, entry, value_ix);
+		break;
 	case LAYOUT_TSTRING:
 		set_str(L, data, entry, value_ix);
+		break;
 	}
 }
 
