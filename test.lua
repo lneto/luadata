@@ -3,6 +3,10 @@ local data = require'data'
 -- create a new data object
 d1 = data.new{0x0f}
 
+-- with no layout applied, __index and __newindex should return nil
+d1.no = 0xdead
+assert(d1.no == nil)
+
 -- create and apply a data layout
 d1:layout{byte = {0, 8}, lsb = {7, 1}}
 
