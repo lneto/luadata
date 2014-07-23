@@ -247,6 +247,9 @@ data_get_field(lua_State *L, data_t *data, int key_ix)
 		return 0;
 
 	layout_entry_t *entry = get_entry(L, data, key_ix);
+	if (entry == NULL)
+		return 0;
+
 	switch (entry->type) {
 	case LAYOUT_TNUMBER:
 		return get_num(L, data, entry);
@@ -263,6 +266,9 @@ data_set_field(lua_State *L, data_t *data, int key_ix, int value_ix)
 		return;
 
 	layout_entry_t *entry = get_entry(L, data, key_ix);
+	if (entry == NULL)
+		return;
+
 	switch (entry->type) {
 	case LAYOUT_TNUMBER:
 		set_num(L, data, entry, value_ix);
