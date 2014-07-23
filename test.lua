@@ -97,6 +97,17 @@ d:layout(l)
 d.uint16be = 0xBEEF
 assert(d.uint16be == 0xBEEF)
 
+d = data.new(128)
+l = data.layout{
+        toobig = {0, 65},
+        uint64 = {0, 64},
+} 
+        
+d:layout(l)
+d.uint64 = -1
+assert(d.toobig == nil)
+assert(d.uint64 == -1)
+
 -- create a new data object from a string
 d = data.new'\a'
 d:layout{ascii = {1, 7}} 
