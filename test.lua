@@ -108,9 +108,9 @@ l = data.layout{
 } 
         
 d:layout(l)
-d.uint64 = -1
+d.int64 = -1
 assert(d.toobig == nil)
-assert(d.uint64 == -1)
+assert(d.int64 == -1)
 
 -- create a new data object from a string
 d = data.new'\a'
