@@ -158,7 +158,8 @@ binary_get_uint64(byte_t *bytes, size_t offset, size_t width, int endian)
 }
 
 void
-binary_set_uint64(byte_t *bytes, size_t offset, size_t width, int endian, uint64_t value)
+binary_set_uint64(byte_t *bytes, size_t offset, size_t width, int endian,
+	uint64_t value)
 {
 	size_t msb_offset = MSB_OFFSET(offset);
 	size_t lsb_offset = LSB_OFFSET(width, msb_offset);
