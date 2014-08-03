@@ -135,7 +135,7 @@ new_data(lua_State *L, data_raw_t *raw, size_t offset, size_t length)
 	data->raw->ptr, ENTRY_BIT_OFFSET(data, entry), \
 	entry->length, entry->endian
 
-static int
+inline static int
 get_num(lua_State *L, data_t *data, layout_entry_t *entry)
 {
 	if (!check_num_limits(data, entry))
