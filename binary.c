@@ -25,7 +25,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#ifndef _KERNEL
 #include <limits.h>
+#else
+#include <machine/limits.h>
+#endif
 
 #include <sys/param.h>
 
