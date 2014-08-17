@@ -19,7 +19,6 @@ d1.lsb = 0
 -- access the whole byte again
 assert(d1.byte == 0x0e)
 
-print(data.layout)
 -- create a new layout
 l = data.layout{
 	uint16be = {0, 16},
@@ -108,9 +107,9 @@ l = data.layout{
 } 
         
 d:layout(l)
-d.int64 = -1
+d.uint64 = -1
 assert(d.toobig == nil)
-assert(d.int64 == -1)
+assert(d.uint64 == -1)
 
 -- create a new data object from a string
 d = data.new'\a'
