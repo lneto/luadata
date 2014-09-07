@@ -284,6 +284,17 @@ ldata_newref(lua_State *L, void *ptr, size_t size)
 	return luau_ref(L);
 }
 
+#if _KERNEL
+int
+ldata_newref_chain(lua_State *L, struct mbuf *chain)
+{
+	data_new_chain(L, chain, false);
+	/* keep the new data object on the stack */
+	lua_pushvalue(L, -1);
+	return luau_ref(L);
+}
+#endif
+
 void
 ldata_unref(lua_State *L, int r)
 {
@@ -293,7 +304,7 @@ ldata_unref(lua_State *L, int r)
 	if (data == NULL)
 		return;
 
-	data->raw->ptr = NULL;
+	data_unref(data);
 
 	/* pop data object */
 	lua_pop(L, 1);
@@ -311,9 +322,9 @@ ldata_topointer(lua_State *L, int index, size_t *size)
 	}
 
 	if (size != NULL)
-		*size = data->raw->size;
+		*size = data->length;
 
-	return data->raw->ptr;
+	return data_get_ptr(data);
 }
 
 #ifdef _MODULE

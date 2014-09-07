@@ -94,46 +94,23 @@ get_entry(lua_State *L, data_t *data, int key_ix)
 	return layout_get_entry(L, data->layout, key_ix);
 }
 
-inline static bool
-check_raw_ptr(data_t *data)
-{
-	return data->raw->ptr != NULL;
-}
-
-static data_raw_t *
-new_raw(lua_State *L, void *ptr, size_t size, bool free)
-{
-	data_raw_t *raw = (data_raw_t *) luau_malloc(L, sizeof(data_raw_t));
-
-	raw->ptr      = ptr;
-	raw->size     = size;
-	raw->refcount = 0;
-	raw->free     = free;
-	return raw;
-}
-
 static data_t *
-new_data(lua_State *L, data_raw_t *raw, size_t offset, size_t length)
+new_data(lua_State *L, handle_t *handle, size_t offset, size_t length)
 {
 	data_t *data = lua_newuserdata(L, sizeof(data_t));
 
-	data->raw    = raw;
+	data->handle = handle;
 	data->offset = offset;
 	data->length = length;
 	data->layout = LUA_REFNIL;
 
-	luaL_getmetatable(L, DATA_USERDATA);
-	lua_setmetatable(L, -2);
+	luau_setmetatable(L, DATA_USERDATA);
 
 	return data;
 }
 
-#define ENTRY_BIT_OFFSET(data, entry) \
-	(BYTE_TO_BIT(data->offset) + entry->offset)
-
-#define BINARY_PARMS(data, entry) \
-	data->raw->ptr, ENTRY_BIT_OFFSET(data, entry), \
-	entry->length, entry->endian
+#define BINARY_PARMS(data, entry, ptr) \
+	ptr, entry->offset, entry->length, entry->endian
 
 inline static int
 get_num(lua_State *L, data_t *data, layout_entry_t *entry)
@@ -141,8 +118,12 @@ get_num(lua_State *L, data_t *data, layout_entry_t *entry)
 	if (!check_num_limits(data, entry))
 		return 0;
 
+	byte_t *ptr = (byte_t *) data_get_ptr(data);
+	if (ptr == NULL)
+		return 0;
+
 	/* assertion: LUA_INTEGER_BIT <= 64 */
-	lua_Integer value = binary_get_uint64(BINARY_PARMS(data, entry));
+	lua_Integer value = binary_get_uint64(BINARY_PARMS(data, entry, ptr));
 	lua_pushinteger(L, value);
 	return 1;
 }
@@ -165,8 +146,13 @@ set_num(lua_State *L, data_t *data, layout_entry_t *entry, int value_ix)
 	if (!check_num_limits(data, entry))
 		return;
 
+	byte_t *ptr = (byte_t *) data_get_ptr(data);
+	if (ptr == NULL)
+		return;
+
+	/* assertion: LUA_INTEGER_BIT <= 64 */
 	lua_Integer value = lua_tointeger(L, value_ix);
-	binary_set_uint64(BINARY_PARMS(data, entry), value);
+	binary_set_uint64(BINARY_PARMS(data, entry, ptr), value);
 }
 
 static void
@@ -187,10 +173,20 @@ set_str(lua_State *L, data_t *data, layout_entry_t *entry, int value_ix)
 inline data_t *
 data_new(lua_State *L, void *ptr, size_t size, bool free)
 {
-	data_raw_t *raw  = new_raw(L, ptr, size, free);
-	data_t     *data = new_data(L, raw, 0, size);
+	handle_t *handle = handle_new_single(L, ptr, size, free);
+	data_t   *data   = new_data(L, handle, 0, size);
 	return data;
 }
+
+#ifdef _KERNEL
+inline data_t *
+data_new_chain(lua_State *L, struct mbuf *chain, bool free)
+{
+	handle_t *handle = handle_new_chain(L, chain, free);
+	data_t   *data   = new_data(L, handle, 0, chain->m_len);
+	return data;
+}
+#endif
 
 int
 data_new_segment(lua_State *L, data_t *data, size_t offset, size_t length)
@@ -198,25 +194,18 @@ data_new_segment(lua_State *L, data_t *data, size_t offset, size_t length)
 	if (!check_limits(data, offset, length))
 		return 0;
 
-	new_data(L, data->raw, offset, length);
+	handle_t *handle = data->handle;
 
-	data->raw->refcount++;
+	handle->refcount++;
+
+	new_data(L, handle, offset, length);
 	return 1;
 }
 
-void
+inline void
 data_delete(lua_State *L, data_t *data)
 {
-	data_raw_t *raw = data->raw;
-
-	if (raw->refcount == 0) {
-		if (raw->free)
-			luau_free(L, raw->ptr, raw->size);
-
-		luau_free(L, raw, sizeof(data_raw_t));
-	}
-	else
-		raw->refcount--;
+	handle_delete(L, data->handle);
 
 	if (luau_isvalidref(data->layout))
 		luau_unref(L, data->layout);
@@ -243,9 +232,6 @@ data_apply_layout(lua_State *L, data_t *data, int layout_ix)
 int
 data_get_field(lua_State *L, data_t *data, int key_ix)
 {
-	if (!check_raw_ptr(data))
-		return 0;
-
 	layout_entry_t *entry = get_entry(L, data, key_ix);
 	if (entry == NULL)
 		return 0;
@@ -262,9 +248,6 @@ data_get_field(lua_State *L, data_t *data, int key_ix)
 void
 data_set_field(lua_State *L, data_t *data, int key_ix, int value_ix)
 {
-	if (!check_raw_ptr(data))
-		return;
-
 	layout_entry_t *entry = get_entry(L, data, key_ix);
 	if (entry == NULL)
 		return;
@@ -280,7 +263,14 @@ data_set_field(lua_State *L, data_t *data, int key_ix, int value_ix)
 }
 
 inline void *
-data_get_ptr(data_t * data)
+data_get_ptr(data_t *data)
 {
-	return (void *) ((char *) data->raw->ptr + data->offset);
+	return handle_get_ptr(data->handle, data->offset, data->length);
 }
+
+inline void
+data_unref(data_t *data)
+{
+	handle_unref(data->handle);
+}
+

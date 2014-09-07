@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014 Lourival Vieira Neto <lneto@NetBSD.org>.
+ * Copyright (c) 2014, Lourival Vieira Neto <lneto@NetBSD.org>.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,39 +25,53 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
-#ifndef _LUA_UTIL_H_
-#define _LUA_UTIL_H_
+#ifndef _HANDLE_H_
+#define _HANDLE_H_
 
 #ifndef _KERNEL
 #include <stddef.h>
+#include <stdbool.h>
+#else
+#include <sys/types.h>
+#include <sys/mbuf.h>
 #endif
 
 #include <lua.h>
-#include <lauxlib.h>
 
-#define luau_isvalidref(ref)	(ref != LUA_REFNIL && ref != LUA_NOREF)
+typedef struct {
+	void  *ptr;
+	size_t size;
+} single_t;
 
-#define luau_ref(L)		luaL_ref(L, LUA_REGISTRYINDEX)
-#define luau_unref(L, r)	luaL_unref(L, LUA_REGISTRYINDEX, r)
-#define luau_getref(L, r)	lua_rawgeti(L, LUA_REGISTRYINDEX, r)
+typedef union {
+	single_t single;
+#ifdef _KERNEL
+	struct mbuf *chain;
+#endif
+} bucket_t;
 
-#define luau_tosize(L, index)	((size_t) lua_tointeger(L, index))
-#define luau_pushsize(L, size)	lua_pushinteger(L, (lua_Integer) size)
+typedef enum {
+	HANDLE_TYPE_SINGLE = 0,
+	HANDLE_TYPE_CHAIN,
+} handle_type_t;
 
-void luau_getarray(lua_State *, int, lua_Integer);
+typedef struct {
+	bucket_t      bucket;
+	handle_type_t type;
+	size_t        refcount;
+	bool          free;
+} handle_t;
 
-lua_Integer luau_getarray_integer(lua_State *, int, lua_Integer);
+handle_t * handle_new_single(lua_State *, void *, size_t, bool);
 
-void luau_gettable(lua_State *, int, int);
+#ifdef _KERNEL
+handle_t * handle_new_chain(lua_State *, struct mbuf *, bool);
+#endif
 
-void luau_settable(lua_State *, int, int, int);
+void handle_delete(lua_State *, handle_t *);
 
-void luau_getmetatable(lua_State *, int, int);
+void * handle_get_ptr(handle_t *, size_t, size_t);
 
-void luau_setmetatable(lua_State *, const char *);
+void handle_unref(handle_t *);
 
-void * luau_malloc(lua_State *, size_t);
-
-void luau_free(lua_State *, void *, size_t);
-
-#endif /* _LUA_UTIL_H_ */
+#endif /* _HANDLE_H_ */

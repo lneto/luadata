@@ -33,30 +33,29 @@
 #include <stdbool.h>
 #else
 #include <sys/types.h>
+#include <sys/mbuf.h>
 #endif
 
 #include <lua.h>
 
+#include "handle.h"
 #include "layout.h"
 
 #define DATA_LIB	"data"
 #define DATA_USERDATA	"data.data"
 
 typedef struct {
-	void  *ptr;
-	size_t size;
-	size_t refcount;
-	bool   free;
-} data_raw_t;
-
-typedef struct {
-	data_raw_t *raw;
-	size_t      offset;
-	size_t      length;
-	int         layout;
+	handle_t *handle;
+	size_t    offset;
+	size_t    length;
+	int       layout;
 } data_t;
 
 data_t * data_new(lua_State *, void *, size_t, bool);
+
+#ifdef _KERNEL
+data_t * data_new_chain(lua_State *, struct mbuf *, bool);
+#endif
 
 int data_new_segment(lua_State *, data_t *, size_t, size_t);
 
@@ -71,5 +70,7 @@ int data_get_field(lua_State *, data_t *, int);
 void data_set_field(lua_State *, data_t *, int, int);
 
 void * data_get_ptr(data_t *);
+
+void data_unref(data_t *);
 
 #endif /* _DATA_H_ */

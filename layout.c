@@ -149,8 +149,7 @@ new_entry(lua_State *L, layout_entry_t *entry)
 	layout_entry_t *nentry =
 		(layout_entry_t *) lua_newuserdata(L, sizeof(layout_entry_t));
 
-	luaL_getmetatable(L, LAYOUT_ENTRY_USERDATA);
-	lua_setmetatable(L, -2);
+	luau_setmetatable(L, LAYOUT_ENTRY_USERDATA);
 
 	copy_entry(nentry, entry);
 	return 1;

@@ -79,6 +79,13 @@ luau_getmetatable(lua_State *L, int index, int field_index)
 	lua_remove(L, -2);
 }
 
+inline void
+luau_setmetatable(lua_State *L, const char *tname)
+{
+	luaL_getmetatable(L, tname);
+	lua_setmetatable(L, -2);
+}
+
 void *
 luau_malloc(lua_State *L, size_t size)
 {
@@ -94,3 +101,4 @@ luau_free(lua_State *L, void * ptr, size_t size)
 	lua_Alloc alloc = lua_getallocf(L, &ud);
 	alloc(ud, ptr, size, 0);
 }
+
