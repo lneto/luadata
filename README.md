@@ -1,7 +1,7 @@
 luadata
 =======
 
-Luadata provides C and Lua APIs to handle binary data using Lua scripts. Here is a briefly description of those:
+Luadata provides C and Lua APIs to handle binary data using Lua scripts. Here is a brief description of those:
 
 ## 1. Lua API
 
