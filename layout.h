@@ -32,10 +32,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #else
-#include <sys/types.h>
 #endif
-
-#include <sys/endian.h>
 
 #include <lua.h>
 

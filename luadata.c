@@ -28,7 +28,7 @@
 #ifndef _KERNEL
 #include <string.h>
 #else
-#include <lib/libkern/libkern.h>
+#include <linux/kernel.h>
 #endif
 
 #include <lua.h>
@@ -40,14 +40,18 @@
 #include "data.h"
 #include "layout.h"
 
+#include <linux/module.h>
+
 static char *
 new_data_num(lua_State *L, size_t *len)
 {
+	char *data;
+
 	*len = luau_tosize(L, 1);
 	if (*len == 0)
 		return NULL;
 
-	char *data = (char *) luau_malloc(L, *len);
+	data = (char *) luau_malloc(L, *len);
 	if (data == NULL)
 		return NULL;
 
@@ -58,6 +62,9 @@ new_data_num(lua_State *L, size_t *len)
 static char *
 new_data_tab(lua_State *L, size_t *len)
 {
+	char *data;
+	size_t i;
+
 #if LUA_VERSION_NUM >= 502
 	*len = lua_rawlen(L, 1);
 #else
@@ -66,11 +73,11 @@ new_data_tab(lua_State *L, size_t *len)
 	if (*len == 0)
 		return NULL;
 
-	char *data = (char *) luau_malloc(L, *len);
+	data = (char *) luau_malloc(L, *len);
 	if (data == NULL)
 		return NULL;
 
-	size_t i = 0;
+	i = 0;
 	lua_pushnil(L);  /* first key */
 	while (lua_next(L, 1) != 0 && i < *len) {
 		/* uses 'key' (at index -2) and 'value' (at index -1) */
@@ -84,11 +91,14 @@ new_data_tab(lua_State *L, size_t *len)
 static char *
 new_data_str(lua_State *L, size_t *len)
 {
-	const char *str = lua_tolstring(L, 1, len);
+	const char *str;
+	char *data;
+
+	str = lua_tolstring(L, 1, len);
 	if (str == NULL || *len == 0)
 		return NULL;
 
-	char *data = (char *) luau_malloc(L, *len);
+	data = (char *) luau_malloc(L, *len);
 	if (data == NULL)
 		return NULL;
 
@@ -153,13 +163,16 @@ new_segment(lua_State *L)
 static int
 apply_layout(lua_State *L)
 {
-	data_t *data = lua_touserdata(L, 1);
+	data_t *data;
+	bool is_layout;
+
+	data = lua_touserdata(L, 1);
 
 	if (!lua_istable(L, 2))
 		return 0;
 
 	lua_getfield(L, 2, LAYOUT_STAMP);
-	bool is_layout = (bool) lua_toboolean(L, -1);
+	is_layout = (bool) lua_toboolean(L, -1);
 	lua_pop(L, 1);
 
 	if (!is_layout)
@@ -284,23 +297,13 @@ ldata_newref(lua_State *L, void *ptr, size_t size)
 	return luau_ref(L);
 }
 
-#if _KERNEL
-int
-ldata_newref_chain(lua_State *L, struct mbuf *chain)
-{
-	data_new_chain(L, chain, false);
-	/* keep the new data object on the stack */
-	lua_pushvalue(L, -1);
-	return luau_ref(L);
-}
-#endif
-
 void
 ldata_unref(lua_State *L, int r)
 {
+	data_t *data;
 	luau_getref(L, r);
 
-	data_t *data = data_test(L, -1);
+	data = data_test(L, -1);
 	if (data == NULL)
 		return;
 
@@ -327,27 +330,22 @@ ldata_topointer(lua_State *L, int index, size_t *size)
 	return data_get_ptr(data);
 }
 
-#ifdef _MODULE
-#include <sys/lua.h>
-#include <sys/module.h>
 
-MODULE(MODULE_CLASS_MISC, luadata, "lua");
+#ifdef _KERNEL
+EXPORT_SYMBOL(luaopen_data);
 
-static int
-luadata_modcmd(modcmd_t cmd, void *opaque)
+static int __init
+data_init(void)
+__attribute__ ((unused));
+
+static int __init
+data_init(void)
 {
-	int error;
+        return 0;
+}
 
-	switch (cmd) {
-	case MODULE_CMD_INIT:
-		error = klua_mod_register(DATA_LIB, luaopen_data);
-		break;
-	case MODULE_CMD_FINI:
-		error = klua_mod_unregister(DATA_LIB);
-		break;
-	default:
-		error = ENOTTY;
-	}
-	return error;
+static void __exit
+data_exit(void)
+{
 }
 #endif

@@ -1,5 +1,7 @@
 *.o
+*.o.cmd
 *.so
+modules.*
 bak/
 tmp/
 CVS/

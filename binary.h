@@ -28,16 +28,15 @@
 #ifndef _BINARY_H_
 #define _BINARY_H_
 
-#include <sys/endian.h>
-
 #ifdef _KERNEL
-#include <sys/types.h>
+#include <linux/types.h>
 #else
 #include <stddef.h>
 #include <stdint.h>
 #endif
 
-#define BYTE_BIT	CHAR_BIT
+#define CHAR_BIT	(8)
+#define BYTE_BIT	(CHAR_BIT)
 
 typedef unsigned char byte_t;
 
