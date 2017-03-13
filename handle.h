@@ -32,8 +32,6 @@
 #include <stddef.h>
 #include <stdbool.h>
 #else
-#include <sys/types.h>
-#include <sys/mbuf.h>
 #endif
 
 #include <lua.h>
@@ -45,9 +43,6 @@ typedef struct {
 
 typedef union {
 	single_t single;
-#ifdef _KERNEL
-	struct mbuf *chain;
-#endif
 } bucket_t;
 
 typedef enum {
@@ -63,10 +58,6 @@ typedef struct {
 } handle_t;
 
 handle_t * handle_new_single(lua_State *, void *, size_t, bool);
-
-#ifdef _KERNEL
-handle_t * handle_new_chain(lua_State *, struct mbuf *, bool);
-#endif
 
 void handle_delete(lua_State *, handle_t *);
 

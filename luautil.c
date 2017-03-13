@@ -45,8 +45,9 @@ luau_getarray(lua_State *L, int index, lua_Integer n)
 lua_Integer
 luau_getarray_integer(lua_State *L, int index, lua_Integer n)
 {
+	lua_Integer result;
 	luau_getarray(L, index, n);
-	lua_Integer result = lua_tointeger(L, -1);
+	result = lua_tointeger(L, -1);
 	lua_pop(L, 1);
 	return result;
 }

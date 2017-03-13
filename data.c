@@ -28,10 +28,8 @@
 #ifndef _KERNEL
 #include <string.h>
 #else
-#include <lib/libkern/libkern.h>
+#define MIN	min
 #endif
-
-#include <sys/param.h>
 
 #include <lauxlib.h>
 
@@ -115,15 +113,18 @@ new_data(lua_State *L, handle_t *handle, size_t offset, size_t length)
 inline static int
 get_num(lua_State *L, data_t *data, layout_entry_t *entry)
 {
-	if (!check_num_limits(data, entry))
+	byte_t *ptr;
+        lua_Integer value;
+
+        if (!check_num_limits(data, entry))
 		return 0;
 
-	byte_t *ptr = (byte_t *) data_get_ptr(data);
+	ptr  = (byte_t *) data_get_ptr(data);
 	if (ptr == NULL)
 		return 0;
 
 	/* assertion: LUA_INTEGER_BIT <= 64 */
-	lua_Integer value = binary_get_uint64(BINARY_PARMS(data, entry, ptr));
+	value = binary_get_uint64(BINARY_PARMS(data, entry, ptr));
 	lua_pushinteger(L, value);
 	return 1;
 }
@@ -131,11 +132,14 @@ get_num(lua_State *L, data_t *data, layout_entry_t *entry)
 inline static int
 get_str(lua_State *L, data_t *data, layout_entry_t *entry)
 {
+        const char *ptr;
+        const char *s;
+
 	if (!check_str_limits(data, entry))
 		return 0;
 
-	const char *ptr = (const char *) data_get_ptr(data); 
-	const char *s = ptr + entry->offset;
+	ptr = (const char *) data_get_ptr(data); 
+	s = ptr + entry->offset;
 	lua_pushlstring(L, s, entry->length);
 	return 1;
 }
@@ -143,30 +147,36 @@ get_str(lua_State *L, data_t *data, layout_entry_t *entry)
 inline static void
 set_num(lua_State *L, data_t *data, layout_entry_t *entry, int value_ix)
 {
+        byte_t *ptr;
+        lua_Integer value;
+
 	if (!check_num_limits(data, entry))
 		return;
 
-	byte_t *ptr = (byte_t *) data_get_ptr(data);
+	ptr = (byte_t *) data_get_ptr(data);
 	if (ptr == NULL)
 		return;
 
 	/* assertion: LUA_INTEGER_BIT <= 64 */
-	lua_Integer value = lua_tointeger(L, value_ix);
+	value = lua_tointeger(L, value_ix);
 	binary_set_uint64(BINARY_PARMS(data, entry, ptr), value);
 }
 
 static void
 set_str(lua_State *L, data_t *data, layout_entry_t *entry, int value_ix)
 {
+	size_t len;
+        const char *s; 
+        char *ptr; 
+
 	if (!check_str_limits(data, entry))
 		return;
 
-	size_t len;
-	const char *s = lua_tolstring(L, value_ix, &len);
+	s = lua_tolstring(L, value_ix, &len);
 	if (s == NULL)
 		return;
 
-	char *ptr = (char *) data_get_ptr(data); 
+	ptr = (char *) data_get_ptr(data); 
 	memcpy(ptr + entry->offset, s, MIN(len, entry->length));
 }
 
@@ -178,23 +188,14 @@ data_new(lua_State *L, void *ptr, size_t size, bool free)
 	return data;
 }
 
-#ifdef _KERNEL
-inline data_t *
-data_new_chain(lua_State *L, struct mbuf *chain, bool free)
-{
-	handle_t *handle = handle_new_chain(L, chain, free);
-	data_t   *data   = new_data(L, handle, 0, chain->m_len);
-	return data;
-}
-#endif
-
 int
 data_new_segment(lua_State *L, data_t *data, size_t offset, size_t length)
 {
+        handle_t *handle; 
+        handle  = data->handle;
+
 	if (!check_limits(data, offset, length))
 		return 0;
-
-	handle_t *handle = data->handle;
 
 	handle->refcount++;
 

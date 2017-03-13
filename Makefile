@@ -1,16 +1,3 @@
-LUA_MODULES=	data
+EXTRA_CFLAGS += -Ilib/lunatik/lua -Ilib/luadata/sys -D_KERNEL
 
-LUA_SRCS.data=	luadata.c
-LUA_SRCS.data+=	data.c
-LUA_SRCS.data+=	handle.c
-LUA_SRCS.data+=	layout.c
-LUA_SRCS.data+=	luautil.c
-LUA_SRCS.data+=	binary.c
-
-DATA=		data.so
-LDLIBS= 	-llua  ${DATA}
-test: 		test.c ${DATA}
-
-CLEANFILES+= 	test
-
-.include <bsd.lua.mk>
+obj-y += binary.o data.o handle.o layout.o luadata.o luautil.o

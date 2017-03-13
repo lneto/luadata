@@ -29,8 +29,7 @@
 #define _LUA_DATA_H_
 
 #ifdef _KERNEL
-#include <sys/types.h>
-#include <sys/mbuf.h>
+#include <linux/types.h>
 #else
 #include <stddef.h>
 #endif
@@ -40,10 +39,6 @@
 extern int luaopen_data(lua_State *);
 
 extern int ldata_newref(lua_State *, void *, size_t);
-
-#if _KERNEL
-extern int ldata_newref_chain(lua_State *, struct mbuf *);
-#endif
 
 extern void ldata_unref(lua_State *, int);
 

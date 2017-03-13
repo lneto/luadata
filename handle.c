@@ -26,7 +26,7 @@
  * SUCH DAMAGE.
  */
 #ifdef _KERNEL
-#include <machine/limits.h>
+#include <linux/kernel.h>
 #endif
 
 #include <lauxlib.h>
@@ -47,10 +47,6 @@ free_handle(lua_State *L, handle_t *handle)
 	}
 	case HANDLE_TYPE_CHAIN:
 	{
-#ifdef _KERNEL
-		struct mbuf *chain = handle->bucket.chain;
-		m_free(chain);
-#endif
 		break;
 	}
 	}
@@ -71,22 +67,6 @@ handle_new_single(lua_State *L, void *ptr, size_t size, bool free)
 
 	return handle;
 }
-
-#ifdef _KERNEL
-handle_t *
-handle_new_chain(lua_State *L, struct mbuf *chain, bool free)
-{
-	handle_t *handle = (handle_t *) luau_malloc(L, sizeof(handle_t));
-
-	handle->bucket.chain = chain;
-
-	handle->type     = HANDLE_TYPE_CHAIN;
-	handle->refcount = 0;
-	handle->free     = free;
-
-	return handle;
-}
-#endif
 
 void
 handle_delete(lua_State *L, handle_t *handle)
@@ -118,18 +98,6 @@ handle_get_ptr(handle_t *handle, size_t offset, size_t length)
 	}
 	case HANDLE_TYPE_CHAIN:
 	{
-#ifdef _KERNEL
-		struct mbuf *chain = handle->bucket.chain;
-		if (chain == NULL || offset > INT_MAX || length > INT_MAX)
-			return NULL;
-
-		struct mbuf *m = m_pulldown(chain, (int) offset, (int) length,
-				NULL);
-		if (m == NULL)
-			return NULL;
-
-		ptr = mtod(m, void *);
-#endif
 	}
 	}
 
@@ -149,10 +117,6 @@ handle_unref(handle_t *handle)
 	}
 	case HANDLE_TYPE_CHAIN:
 	{
-#ifdef _KERNEL
-		handle->bucket.chain = NULL;
-#endif
-		break;
 	}
 	}
 }

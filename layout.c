@@ -25,6 +25,10 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#ifdef _KERNEL
+#include "sys/endian.h"
+#endif
+
 #include <lua.h>
 #include <lauxlib.h>
 

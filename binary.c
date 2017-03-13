@@ -28,14 +28,16 @@
 #ifndef _KERNEL
 #include <limits.h>
 #else
-#include <machine/limits.h>
+#include <linux/kernel.h>
+#include "sys/endian.h"
+#define UINT64_MAX      (U64_MAX)
+#define MAX	max
+#define UCHAR_MAX	(255)
 #endif
-
-#include <sys/param.h>
 
 #include "binary.h"
 
-#define BYTE_MAX	UCHAR_MAX
+#define BYTE_MAX	(UCHAR_MAX)
 #define UINT64_BIT	(64)
 
 inline static void
@@ -86,13 +88,14 @@ contract(uint64_t *value, size_t width, size_t msb_offset, byte_t truncated)
 static void
 swap_bytes_in(uint64_t *value, size_t width)
 {
+	byte_t truncated;
 	size_t msb_offset = VALUE_MSB_OFFSET(width);
 
 	*value <<= msb_offset;
 
 	*value = bswap64(*value);
 
-	byte_t truncated = TRUNCATED_BITS(width);
+	truncated = TRUNCATED_BITS(width);
 	if (truncated > 0)
 		expand(value, width, msb_offset, truncated);
 }
@@ -100,11 +103,12 @@ swap_bytes_in(uint64_t *value, size_t width)
 static void
 swap_bytes_out(uint64_t *value, size_t width)
 {
+	byte_t truncated;
 	size_t msb_offset = VALUE_MSB_OFFSET(width);
 
 	*value = bswap64(*value);
 
-	byte_t truncated = TRUNCATED_BITS(width);
+	truncated = TRUNCATED_BITS(width);
 	if (truncated > 0)
 		contract(value, width, msb_offset, truncated);
 
@@ -114,7 +118,7 @@ swap_bytes_out(uint64_t *value, size_t width)
 #define MSB_OFFSET(offset)		(offset % BYTE_BIT)
 
 #define LSB_OFFSET(width, msb_offset)					\
-	MAX((ssize_t) (BYTE_BIT - msb_offset - width), 0)
+	MAX((ssize_t) (BYTE_BIT - msb_offset - width), (ssize_t) 0)
 
 #define BYTE_POSITION(offset)		(offset / BYTE_BIT)
 
@@ -132,13 +136,20 @@ swap_bytes_out(uint64_t *value, size_t width)
 uint64_t
 binary_get_uint64(byte_t *bytes, size_t offset, size_t width, int endian)
 {
-	size_t msb_offset = MSB_OFFSET(offset);
-	size_t lsb_offset = LSB_OFFSET(width, msb_offset);
-	size_t pos        = BYTE_POSITION(offset);
-	size_t overflow   = OVERFLOW_BITS(width, msb_offset, lsb_offset);
-	byte_t mask       = MASK(msb_offset, lsb_offset);
+	size_t msb_offset;
+	size_t lsb_offset;
+	size_t pos;
+	size_t overflow;
+	int64_t value;
+	byte_t mask;
 
-	uint64_t value = (byte_t) (bytes[ pos ] & mask) >> lsb_offset;
+	msb_offset = MSB_OFFSET(offset);
+	lsb_offset = LSB_OFFSET(width, msb_offset);
+	pos        = BYTE_POSITION(offset);
+	overflow   = OVERFLOW_BITS(width, msb_offset, lsb_offset);
+	mask       = MASK(msb_offset, lsb_offset);
+
+	value      = (byte_t) (bytes[ pos ] & mask) >> lsb_offset;
 
 	for (; overflow >= BYTE_BIT; overflow -= BYTE_BIT)
 		value = (value << BYTE_BIT) | bytes[ ++pos ];
@@ -161,11 +172,17 @@ void
 binary_set_uint64(byte_t *bytes, size_t offset, size_t width, int endian,
 	uint64_t value)
 {
-	size_t msb_offset = MSB_OFFSET(offset);
-	size_t lsb_offset = LSB_OFFSET(width, msb_offset);
-	size_t pos        = BYTE_POSITION(offset);
-	size_t overflow   = OVERFLOW_BITS(width, msb_offset, lsb_offset);
-	byte_t clear_mask = ~MASK(msb_offset, lsb_offset);
+        size_t msb_offset;
+        size_t lsb_offset;
+        size_t pos;
+        size_t overflow;
+        byte_t clear_mask;
+
+	msb_offset = MSB_OFFSET(offset);
+	lsb_offset = LSB_OFFSET(width, msb_offset);
+	pos        = BYTE_POSITION(offset);
+	overflow   = OVERFLOW_BITS(width, msb_offset, lsb_offset);
+	clear_mask = ~MASK(msb_offset, lsb_offset);
 
 	if (NEED_SWAP(width, endian))
 		swap_bytes_out(&value, width);

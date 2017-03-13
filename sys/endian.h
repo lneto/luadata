@@ -40,4 +40,18 @@
 #define bswap64 __builtin_bswap64
 #endif
 
+#ifdef __MIPSEL__
+#define __BYTE_ORDER __LITTLE_ENDIAN
+#else
+#define __BYTE_ORDER __BIG_ENDIAN
+#endif
+
+#ifdef _KERNEL
+#define __LITTLE_ENDIAN 1234
+#define __BIG_ENDIAN 4321
+#define BIG_ENDIAN      __BIG_ENDIAN
+#define LITTLE_ENDIAN   __LITTLE_ENDIAN
+#define BYTE_ORDER      __BYTE_ORDER
+#endif
+
 #endif /* _ENDIAN_H_ */
