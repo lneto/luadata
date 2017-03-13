@@ -119,7 +119,7 @@ get_num(lua_State *L, data_t *data, layout_entry_t *entry)
         if (!check_num_limits(data, entry))
 		return 0;
 
-	ptr  = (byte_t *) data_get_ptr(data);
+	ptr = (byte_t *) data_get_ptr(data);
 	if (ptr == NULL)
 		return 0;
 
