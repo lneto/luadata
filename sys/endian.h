@@ -30,14 +30,19 @@
 #ifndef _ENDIAN_H_
 #define _ENDIAN_H_
 
+#ifndef _KERNEL
 #ifdef __MACH__
 #include <machine/endian.h>
 #else
 #include <endian.h>
 #endif
+#endif
 
 #ifdef __GNUC__
-#define bswap64 __builtin_bswap64
+#define bswap64		__builtin_bswap64
+#define BYTE_ORDER	__BYTE_ORDER__
+#define LITTLE_ENDIAN	__ORDER_LITTLE_ENDIAN__
+#define BIG_ENDIAN	__ORDER_BIG_ENDIAN__
 #endif
 
 #endif /* _ENDIAN_H_ */

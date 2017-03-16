@@ -28,7 +28,11 @@
 #ifndef _KERNEL
 #include <string.h>
 #else
+#if defined(__NetBSD__)
 #include <lib/libkern/libkern.h>
+#elif defined(__linux__)
+#include <linux/kernel.h>
+#endif
 #endif
 
 #include <lua.h>
@@ -284,7 +288,7 @@ ldata_newref(lua_State *L, void *ptr, size_t size)
 	return luau_ref(L);
 }
 
-#if _KERNEL
+#if defined(_KERNEL) && defined(__NetBSD__)
 int
 ldata_newref_chain(lua_State *L, struct mbuf *chain)
 {
@@ -327,7 +331,8 @@ ldata_topointer(lua_State *L, int index, size_t *size)
 	return data_get_ptr(data);
 }
 
-#ifdef _MODULE
+#ifdef _KERNEL
+#if defined(__NetBSD__) && defined(_MODULE)
 #include <sys/lua.h>
 #include <sys/module.h>
 
@@ -350,4 +355,21 @@ luadata_modcmd(modcmd_t cmd, void *opaque)
 	}
 	return error;
 }
+#elif defined(__linux__)
+#include <linux/module.h>
+
+EXPORT_SYMBOL(luaopen_data);
+
+static int __init data_init(void)
+{
+        return 0;
+}
+
+static void __exit data_exit(void)
+{
+}
+
+module_init(data_init);
+module_exit(data_exit);
+#endif
 #endif

@@ -32,7 +32,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #else
+#if defined(__NetBSD__)
 #include <sys/types.h>
+#endif
 #endif
 
 #include <sys/endian.h>

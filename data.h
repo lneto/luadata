@@ -32,8 +32,10 @@
 #include <stddef.h>
 #include <stdbool.h>
 #else
+#if defined(__NetBSD__)
 #include <sys/types.h>
 #include <sys/mbuf.h>
+#endif
 #endif
 
 #include <lua.h>
@@ -53,7 +55,7 @@ typedef struct {
 
 data_t * data_new(lua_State *, void *, size_t, bool);
 
-#ifdef _KERNEL
+#if defined(_KERNEL) && defined(__NetBSD__)
 data_t * data_new_chain(lua_State *, struct mbuf *, bool);
 #endif
 

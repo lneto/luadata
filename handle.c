@@ -26,7 +26,11 @@
  * SUCH DAMAGE.
  */
 #ifdef _KERNEL
+#if defined(__NetBSD__)
 #include <machine/limits.h>
+#elif defined(__linux__)
+#include <linux/kernel.h>
+#endif
 #endif
 
 #include <lauxlib.h>
@@ -47,7 +51,7 @@ free_handle(lua_State *L, handle_t *handle)
 	}
 	case HANDLE_TYPE_CHAIN:
 	{
-#ifdef _KERNEL
+#if defined(_KERNEL) && defined(__NetBSD__)
 		struct mbuf *chain = handle->bucket.chain;
 		m_free(chain);
 #endif
@@ -72,7 +76,7 @@ handle_new_single(lua_State *L, void *ptr, size_t size, bool free)
 	return handle;
 }
 
-#ifdef _KERNEL
+#if defined(_KERNEL) && defined(__NetBSD__)
 handle_t *
 handle_new_chain(lua_State *L, struct mbuf *chain, bool free)
 {
@@ -118,7 +122,7 @@ handle_get_ptr(handle_t *handle, size_t offset, size_t length)
 	}
 	case HANDLE_TYPE_CHAIN:
 	{
-#ifdef _KERNEL
+#if defined(_KERNEL) && defined(__NetBSD__)
 		struct mbuf *chain = handle->bucket.chain;
 		if (chain == NULL || offset > INT_MAX || length > INT_MAX)
 			return NULL;
@@ -149,7 +153,7 @@ handle_unref(handle_t *handle)
 	}
 	case HANDLE_TYPE_CHAIN:
 	{
-#ifdef _KERNEL
+#if defined(_KERNEL) && defined(__NetBSD__)
 		handle->bucket.chain = NULL;
 #endif
 		break;

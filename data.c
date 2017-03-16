@@ -28,10 +28,11 @@
 #ifndef _KERNEL
 #include <string.h>
 #else
+#if defined(__NetBSD__)
+#include <sys/param.h>
 #include <lib/libkern/libkern.h>
 #endif
-
-#include <sys/param.h>
+#endif
 
 #include <lauxlib.h>
 
@@ -178,7 +179,7 @@ data_new(lua_State *L, void *ptr, size_t size, bool free)
 	return data;
 }
 
-#ifdef _KERNEL
+#if defined(_KERNEL) && defined(__NetBSD__)
 inline data_t *
 data_new_chain(lua_State *L, struct mbuf *chain, bool free)
 {

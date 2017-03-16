@@ -28,11 +28,15 @@
 #ifndef _LUA_DATA_H_
 #define _LUA_DATA_H_
 
-#ifdef _KERNEL
+#ifndef _KERNEL
+#include <stddef.h>
+#else
+#if defined(__NetBSD__)
 #include <sys/types.h>
 #include <sys/mbuf.h>
-#else
-#include <stddef.h>
+#elif defined(__linux__)
+#include <linux/types.h>
+#endif
 #endif
 
 #include <lua.h>
@@ -41,7 +45,7 @@ extern int luaopen_data(lua_State *);
 
 extern int ldata_newref(lua_State *, void *, size_t);
 
-#if _KERNEL
+#if defined(_KERNEL) && defined(__NetBSD__)
 extern int ldata_newref_chain(lua_State *, struct mbuf *);
 #endif
 

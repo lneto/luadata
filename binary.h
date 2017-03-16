@@ -30,11 +30,15 @@
 
 #include <sys/endian.h>
 
-#ifdef _KERNEL
-#include <sys/types.h>
-#else
+#ifndef _KERNEL
 #include <stddef.h>
 #include <stdint.h>
+#else
+#if defined(__NetBSD__)
+#include <sys/types.h>
+#elif defined(__linux__)
+#include <linux/types.h>
+#endif
 #endif
 
 #define BYTE_BIT	CHAR_BIT

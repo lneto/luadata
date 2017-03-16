@@ -28,10 +28,15 @@
 #ifndef _KERNEL
 #include <limits.h>
 #else
+#if defined(__NetBSD__)
 #include <machine/limits.h>
+#include <sys/param.h>
+#elif defined(__linux__)
+#include <linux/kernel.h>
+#endif
 #endif
 
-#include <sys/param.h>
+#include <sys/endian.h>
 
 #include "binary.h"
 
