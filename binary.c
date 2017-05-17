@@ -27,6 +27,8 @@
  */
 #ifndef _KERNEL
 #include <limits.h>
+#include <sys/param.h>
+#include <sys/types.h>
 #else
 #if defined(__NetBSD__)
 #include <machine/limits.h>
