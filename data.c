@@ -27,6 +27,7 @@
  */
 #ifndef _KERNEL
 #include <string.h>
+#include <sys/param.h>
 #else
 #if defined(__NetBSD__)
 #include <sys/param.h>
