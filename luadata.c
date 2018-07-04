@@ -331,8 +331,8 @@ ldata_topointer(lua_State *L, int index, size_t *size)
 	return data_get_ptr(data);
 }
 
-#ifdef _KERNEL
-#if defined(__NetBSD__) && defined(_MODULE)
+#if defined(_KERNEL) && defined(_MODULE)
+#if defined(__NetBSD__) 
 #include <sys/lua.h>
 #include <sys/module.h>
 
