@@ -359,6 +359,9 @@ luadata_modcmd(modcmd_t cmd, void *opaque)
 #include <linux/module.h>
 
 EXPORT_SYMBOL(luaopen_data);
+EXPORT_SYMBOL(ldata_newref);
+EXPORT_SYMBOL(ldata_unref);
+EXPORT_SYMBOL(ldata_topointer);
 
 static int __init data_init(void)
 {
