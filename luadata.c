@@ -374,5 +374,6 @@ static void __exit data_exit(void)
 
 module_init(data_init);
 module_exit(data_exit);
+MODULE_ALIAS("luadata");
 #endif
 #endif
