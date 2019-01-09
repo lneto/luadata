@@ -176,6 +176,9 @@ inline data_t *
 data_new(lua_State *L, void *ptr, size_t size, bool free)
 {
 	handle_t *handle = handle_new_single(L, ptr, size, free);
+	if (handle == NULL)
+		return luaL_error(L, "not enough memory");
+
 	data_t   *data   = new_data(L, handle, 0, size);
 	return data;
 }
@@ -185,6 +188,9 @@ inline data_t *
 data_new_chain(lua_State *L, struct mbuf *chain, bool free)
 {
 	handle_t *handle = handle_new_chain(L, chain, free);
+	if (handle == NULL)
+		return luaL_error(L, "not enough memory");
+
 	data_t   *data   = new_data(L, handle, 0, chain->m_len);
 	return data;
 }

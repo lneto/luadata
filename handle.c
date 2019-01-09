@@ -65,6 +65,9 @@ handle_new_single(lua_State *L, void *ptr, size_t size, bool free)
 {
 	handle_t *handle = (handle_t *) luau_malloc(L, sizeof(handle_t));
 
+	if (handle == NULL)
+		return NULL;
+
 	single_t *single = &handle->bucket.single;
 	single->ptr  = ptr;
 	single->size = size;
@@ -81,6 +84,9 @@ handle_t *
 handle_new_chain(lua_State *L, struct mbuf *chain, bool free)
 {
 	handle_t *handle = (handle_t *) luau_malloc(L, sizeof(handle_t));
+
+	if (handle == NULL)
+		return NULL;
 
 	handle->bucket.chain = chain;
 
