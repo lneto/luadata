@@ -102,6 +102,8 @@ Note, all the three data objects point to the same raw data of the d data object
 Creates a new data object pointing to ptr (without copying it), leaves the data object on the top of the Lua stack and returns a reference
 for it. The data object will not be garbage-collected until it is unreferred.
 
+This function may raise a Lua error.
+
 ### 2.2 deletion
 
 #### ```void ldata_unref(lua_State *L, int ref);```
