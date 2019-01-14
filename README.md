@@ -28,6 +28,8 @@ Returns a new data object initialized with the given string. For example:
 d2 = data.new'\a' --> returns a data object with 1 byte.
 ```
 
+`data.new()` may raise a Lua error.
+
 ### 1.2 layout
 
 #### ```data.layout(table)```
