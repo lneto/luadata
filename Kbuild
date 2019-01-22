@@ -1,4 +1,5 @@
 ccflags-y += -D_KERNEL -D'CHAR_BIT=(8)' \
+	-Wno-declaration-after-statement \
 	-D'MIN=min' -D'MAX=max' -D'UCHAR_MAX=(255)' -D'UINT64_MAX=((u64)~0ULL)'
 
 obj-$(CONFIG_LUADATA) += luadata.o
