@@ -121,7 +121,7 @@ swap_bytes_out(uint64_t *value, size_t width)
 #define MSB_OFFSET(offset)		(offset % BYTE_BIT)
 
 #define LSB_OFFSET(width, msb_offset)					\
-	MAX((ssize_t) (BYTE_BIT - msb_offset - width), 0)
+	MAX((ssize_t) (BYTE_BIT - msb_offset - width), (ssize_t) 0)
 
 #define BYTE_POSITION(offset)		(offset / BYTE_BIT)
 
