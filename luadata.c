@@ -305,8 +305,10 @@ ldata_unref(lua_State *L, int r)
 	luau_getref(L, r);
 
 	data_t *data = data_test(L, -1);
-	if (data == NULL)
+	if (data == NULL) {
+		lua_pop(L, 1);
 		return;
+	}
 
 	data_unref(data);
 
