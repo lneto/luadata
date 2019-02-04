@@ -328,7 +328,7 @@ ldata_topointer(lua_State *L, int index, size_t *size)
 	}
 
 	if (size != NULL)
-		*size = data->length;
+		*size = data->length - data->offset;
 
 	return data_get_ptr(data);
 }
