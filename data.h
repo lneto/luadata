@@ -46,7 +46,7 @@
 #define DATA_LIB	"data"
 #define DATA_USERDATA	"data.data"
 
-typedef struct {
+typedef struct data_t {
 	handle_t *handle;
 	size_t    offset;
 	size_t    length;

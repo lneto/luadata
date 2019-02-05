@@ -279,6 +279,23 @@ luaopen_data(lua_State *L)
 	return 1;
 }
 
+struct data_t *
+ldata_new(lua_State *L, void *ptr, size_t size, bool free)
+{
+	return data_new(L, ptr, size, free);
+}
+
+void
+ldata_nullptr(lua_State *L, int idx)
+{
+	data_t *data;
+
+	if ((data = data_test(L, idx)) == NULL)
+		return luaL_error(L, "invalid luadata reference");
+
+	data_unref(data);
+}
+
 int
 ldata_newref(lua_State *L, void *ptr, size_t size)
 {
@@ -361,6 +378,8 @@ luadata_modcmd(modcmd_t cmd, void *opaque)
 #include <linux/module.h>
 
 EXPORT_SYMBOL(luaopen_data);
+EXPORT_SYMBOL(ldata_new);
+EXPORT_SYMBOL(ldata_nullptr);
 EXPORT_SYMBOL(ldata_newref);
 EXPORT_SYMBOL(ldata_unref);
 EXPORT_SYMBOL(ldata_topointer);

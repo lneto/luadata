@@ -41,7 +41,13 @@
 
 #include <lua.h>
 
+struct data_t;
+
 extern int luaopen_data(lua_State *);
+
+extern struct data_t *ldata_new(lua_State *, void *, size_t, bool);
+
+extern void ldata_nullptr(lua_State *, int);
 
 extern int ldata_newref(lua_State *, void *, size_t);
 
