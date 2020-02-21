@@ -177,7 +177,7 @@ data_new(lua_State *L, void *ptr, size_t size, bool free)
 {
 	handle_t *handle = handle_new_single(L, ptr, size, free);
 	if (handle == NULL)
-		return luaL_error(L, "not enough memory");
+		luaL_error(L, "not enough memory");
 
 	data_t   *data   = new_data(L, handle, 0, size);
 	return data;
