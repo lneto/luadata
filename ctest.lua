@@ -2,11 +2,11 @@ function filter(d)
 	-- store d in a global
 	gd = d
 	d:layout{
-		-- most significant 4-bytes
+		-- most significant 4-bits
 		uint4_msb = {0,4},
-		-- inner 16-bytes
+		-- inner 16-bits
 		uint16    = {4, 16},
-		-- least significant 4-bytes
+		-- least significant 4-bits
 		uint4_lsb = {20, 4}
 	}
 	return	d.uint4_msb == 0xa    and
